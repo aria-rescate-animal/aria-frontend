@@ -1,111 +1,259 @@
+/* ============================================
+   ARIA - Variables globales de diseño
+   ============================================ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Colores primarios */
+  --aria-azul-oscuro: #0A2463;
+  --aria-azul: #1565C0;
+  --aria-cyan: #0097A7;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Gradientes */
+  --aria-gradient-panel: linear-gradient(160deg, #0A2463 0%, #1565C0 55%, #0097A7 100%);
+  --aria-gradient-btn: linear-gradient(90deg, #1565C0, #0097A7);
+  --aria-gradient-navbar: linear-gradient(90deg, #0A2463, #1565C0);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Fondos */
+  --aria-bg-page: #F0F6FF;
+  --aria-bg-card: #ffffff;
+  --aria-bg-input: #F8FBFF;
+  --aria-bg-badge: #E3F2FD;
+  --aria-bg-input-error: #FFF8F8;
+  --aria-bg-error: #FFF0F0;
+  --aria-bg-success: #E8F5E9;
+  --aria-bg-warning: #FFF8E1;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Bordes */
+  --aria-border: #BBDEFB;
+  --aria-border-error: #C62828;
+  --aria-border-error-light: #FADADD;
+  --aria-border-success: #C8E6C9;
+
+  /* Textos */
+  --aria-texto-titulo: #0A2463;
+  --aria-texto-subtitulo: #888888;
+  --aria-texto-label: #0A2463;
+  --aria-texto-error: #C0392B;
+  --aria-texto-success: #2E7D32;
+  --aria-texto-warning: #E65100;
+  --aria-texto-muted: #666666;
+  --aria-texto-link: #1565C0;
+
+  /* Sombras */
+  --aria-shadow-card: 0 8px 40px rgba(10, 36, 99, 0.12);
+  --aria-shadow-btn: 0 4px 15px rgba(21, 101, 192, 0.35);
+  --aria-shadow-navbar: 0 2px 12px rgba(10, 36, 99, 0.2);
+
+  /* Bordes redondeados */
+  --aria-radius-sm: 8px;
+  --aria-radius-md: 10px;
+  --aria-radius-lg: 16px;
+  --aria-radius-xl: 20px;
+  --aria-radius-full: 9999px;
+
+  /* Tipografía */
+  --aria-font: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Estados de reporte */
+  --aria-urgente-color: #C62828;
+  --aria-urgente-bg: #FFEBEE;
+  --aria-proceso-color: #E65100;
+  --aria-proceso-bg: #FFF3E0;
+  --aria-rescatado-color: #2E7D32;
+  --aria-rescatado-bg: #E8F5E9;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* ============================================
+   Reset y estilos base
+   ============================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
+  font-family: var(--aria-font);
+  background: var(--aria-bg-page);
+  color: var(--aria-texto-muted);
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
-  width: 1126px;
+  min-height: 100vh;
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
+  text-align: left;
+  border: none;
+}
+
+/* ============================================
+   Clases utilitarias globales
+   ============================================ */
+
+/* Botón primario */
+.aria-btn-primary {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--aria-gradient-btn);
+  color: white;
+  border: none;
+  border-radius: var(--aria-radius-md);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--aria-shadow-btn);
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+}
+
+.aria-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.45);
+}
+
+.aria-btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Botón secundario */
+.aria-btn-secondary {
+  padding: 0.85rem;
+  background: var(--aria-bg-page);
+  color: var(--aria-texto-link);
+  border: 1.5px solid var(--aria-border);
+  border-radius: var(--aria-radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* Input base */
+.aria-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--aria-radius-md);
+  border: 1.5px solid var(--aria-border);
+  background: var(--aria-bg-input);
+  font-size: 0.95rem;
+  color: #333;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+  font-family: var(--aria-font);
+}
+
+.aria-input:focus {
+  border-color: var(--aria-azul);
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.13);
+}
+
+.aria-input.error {
+  border-color: var(--aria-border-error);
+  background: var(--aria-bg-input-error);
+}
+
+/* Label */
+.aria-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--aria-texto-label);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* Mensaje de error */
+.aria-error-msg {
+  color: var(--aria-texto-error);
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  display: block;
+}
+
+/* Card */
+.aria-card {
+  background: var(--aria-bg-card);
+  border-radius: var(--aria-radius-xl);
+  box-shadow: var(--aria-shadow-card);
+  padding: 2.5rem;
+}
+
+/* Badge */
+.aria-badge {
+  display: inline-block;
+  background: var(--aria-bg-badge);
+  color: var(--aria-azul);
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--aria-radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Link */
+.aria-link {
+  color: var(--aria-texto-link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.aria-link:hover {
+  text-decoration: underline;
+}
+
+/* Alerta de error general */
+.aria-alert-error {
+  background: var(--aria-bg-error);
+  color: var(--aria-texto-error);
+  padding: 0.75rem 1rem;
+  border-radius: var(--aria-radius-md);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--aria-border-error-light);
+}
+
+/* Alerta de éxito */
+.aria-alert-success {
+  background: var(--aria-bg-success);
+  color: var(--aria-texto-success);
+  padding: 0.75rem 1rem;
+  border-radius: var(--aria-radius-md);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--aria-border-success);
   text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+}
+
+/* Panel izquierdo (auth) */
+.aria-left-panel {
+  flex: 1 1 320px;
+  background: var(--aria-gradient-panel);
   display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Animaciones globales */
+@keyframes aria-fadeSlideIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+@keyframes aria-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+@keyframes aria-spin {
+  to { transform: rotate(360deg); }
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@keyframes aria-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
