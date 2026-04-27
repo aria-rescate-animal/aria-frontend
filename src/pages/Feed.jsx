@@ -15,9 +15,7 @@ export default function Feed() {
   const [cargando, setCargando] = useState(true);
   const [usandoMock, setUsandoMock] = useState(false);
 
-  useEffect(() => {
-    cargarReportes();
-  }, []);
+  useEffect(() => { cargarReportes(); }, []);
 
   const cargarReportes = async () => {
     try {
@@ -26,7 +24,6 @@ export default function Feed() {
       setReportes(data);
       setUsandoMock(false);
     } catch {
-      console.warn('Backend no disponible, usando datos de prueba');
       setReportes(mockReportes);
       setUsandoMock(true);
     } finally {
@@ -35,64 +32,50 @@ export default function Feed() {
   };
 
   const handleCambiarEstado = async (id, nuevoEstado) => {
-    // Actualiza en pantalla inmediatamente
-    setReportes((prev) =>
-      prev.map((r) => r.id === id ? { ...r, estado: nuevoEstado } : r)
-    );
+    setReportes((prev) => prev.map((r) => r.id === id ? { ...r, estado: nuevoEstado } : r));
     if (reporteSeleccionado?.id === id) {
       setReporteSeleccionado((prev) => ({ ...prev, estado: nuevoEstado }));
     }
-    // Si hay backend, envía el cambio
     if (!usandoMock) {
-      try {
-        await actualizarEstado(id, nuevoEstado);
-      } catch {
-        console.warn('No se pudo actualizar en el backend');
-      }
+      try { await actualizarEstado(id, nuevoEstado); } catch { /* silencioso */ }
     }
   };
 
-  const filtrados = filtro === 'todos'
-    ? reportes
-    : reportes.filter((r) => r.estado === filtro);
+  const filtrados = filtro === 'todos' ? reportes : reportes.filter((r) => r.estado === filtro);
 
   return (
-    <div style={styles.page}>
+    <div className="feed-page">
       <Navbar />
-      <main style={styles.main}>
-        <div style={styles.topBar}>
+      <main className="feed-main">
+        <div className="feed-topbar">
           <div>
-            <h1 style={styles.title}>🐾 Feed de Rescates</h1>
-            <p style={styles.subtitle}>{filtrados.length} reporte{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}</p>
+            <h1 className="feed-title">🐾 Feed de Rescates</h1>
+            <p className="feed-subtitle">{filtrados.length} reporte{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}</p>
           </div>
-          <div style={styles.topActions}>
-            <button onClick={cargarReportes} style={styles.btnRefresh} title="Actualizar">🔄</button>
-            <a href="/nuevo-reporte" style={styles.btnNuevo}>+ Nuevo reporte</a>
+          <div className="feed-top-actions">
+            <button onClick={cargarReportes} className="feed-btn-refresh" title="Actualizar">🔄</button>
+            <a href="/nuevo-reporte" className="feed-btn-nuevo">+ Nuevo reporte</a>
           </div>
         </div>
 
         {usandoMock && (
-          <div style={styles.warningBanner}>⚠️ Mostrando datos de prueba — backend no disponible</div>
+          <div className="aria-alert-warning">⚠️ Mostrando datos de prueba — backend no disponible</div>
         )}
 
-        <div style={styles.filtros}>
+        <div className="feed-filtros">
           {['todos', 'urgente', 'en proceso', 'rescatado'].map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              style={{ ...styles.filtroBtn, background: filtro === f ? '#1565C0' : 'white', color: filtro === f ? 'white' : '#1565C0', border: '1.5px solid #1565C0' }}
+              className={`feed-filtro-btn${filtro === f ? ' active' : ''}`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
 
-        {cargando ? (
-          <Spinner />
-        ) : filtrados.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div style={styles.grid}>
+        {cargando ? <Spinner /> : filtrados.length === 0 ? <EmptyState /> : (
+          <div className="feed-grid">
             {filtrados.map((r) => (
               <Card key={r.id} reporte={r} onClick={setReporteSeleccionado} />
             ))}
@@ -110,18 +93,3 @@ export default function Feed() {
     </div>
   );
 }
-
-const styles = {
-  page: { minHeight: '100vh', background: '#F0F6FF', fontFamily: 'system-ui, sans-serif' },
-  main: { maxWidth: '1100px', margin: '0 auto', padding: '2rem 1rem' },
-  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' },
-  title: { color: '#0A2463', fontSize: '1.7rem', fontWeight: '800', margin: 0 },
-  subtitle: { color: '#888', fontSize: '0.88rem', margin: '0.2rem 0 0' },
-  topActions: { display: 'flex', gap: '0.75rem', alignItems: 'center' },
-  btnRefresh: { background: 'white', border: '1.5px solid #BBDEFB', borderRadius: '10px', padding: '0.6rem 0.9rem', cursor: 'pointer', fontSize: '1rem' },
-  btnNuevo: { background: 'linear-gradient(90deg,#1565C0,#0097A7)', color: 'white', padding: '0.7rem 1.4rem', borderRadius: '10px', fontWeight: '700', textDecoration: 'none', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(21,101,192,0.3)' },
-  warningBanner: { background: '#FFF8E1', color: '#E65100', padding: '0.6rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.85rem', border: '1px solid #FFE082' },
-  filtros: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
-  filtroBtn: { padding: '0.4rem 1rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' },
-};
