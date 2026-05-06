@@ -1,26 +1,36 @@
-// Issue #15 - UI: Componentes de Feedback
-// Issue #15 - UI: Componentes de Feedback
+import { Link } from 'react-router-dom';
+import { PawPrint, Plus } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
 export default function EmptyState() {
+  const { esCiudadano } = useAuth();
+
   return (
-    <div style={styles.wrapper}>
-      <style>{`
-        @keyframes float {
-          0%,100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
-      <span style={styles.icon}>🐶</span>
-      <h3 style={styles.title}>No hay emergencias activas</h3>
-      <p style={styles.text}>¡Buenas noticias! Por ahora no hay animales en situación de riesgo reportados. Si ves uno, repórtalo.</p>
-      <a href="/nuevo-reporte" style={styles.btn}>+ Crear primer reporte</a>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 1rem', gap: '1rem', textAlign: 'center' }}>
+      <div style={{ width: '64px', height: '64px', background: '#eff6ff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <PawPrint size={28} color="#2563eb" strokeWidth={1.5} />
+      </div>
+      <div>
+        <h3 style={{ margin: '0 0 0.5rem', color: '#0f172a', fontSize: '1rem', fontWeight: '700' }}>
+          Sin reportes activos
+        </h3>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '0.875rem', maxWidth: '320px', lineHeight: 1.6 }}>
+          {esCiudadano
+            ? 'No hay reportes en este momento. Si ves un animal en peligro, puedes crear el primer reporte.'
+            : 'No hay casos activos que atender en este momento.'}
+        </p>
+      </div>
+      {esCiudadano && (
+        <Link to="/nuevo-reporte" style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+          background: '#2563eb', color: 'white',
+          padding: '0.6rem 1.25rem', borderRadius: '10px',
+          textDecoration: 'none', fontSize: '0.875rem', fontWeight: '600',
+          boxShadow: '0 2px 8px rgba(37,99,235,0.25)', marginTop: '0.5rem'
+        }}>
+          <Plus size={15} /> Crear reporte
+        </Link>
+      )}
     </div>
   );
 }
-
-const styles = {
-  wrapper: { textAlign: 'center', padding: '4rem 1rem' },
-  icon: { fontSize: '5rem', display: 'block', marginBottom: '1rem', animation: 'float 2.5s ease-in-out infinite' },
-  title: { color: '#0A2463', fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.5rem' },
-  text: { color: '#888', fontSize: '0.9rem', maxWidth: '360px', margin: '0 auto 1.5rem', lineHeight: '1.6' },
-  btn: { display: 'inline-block', background: 'linear-gradient(90deg,#1565C0,#0097A7)', color: 'white', padding: '0.7rem 1.4rem', borderRadius: '10px', textDecoration: 'none', fontWeight: '700', fontSize: '0.9rem' },
-};

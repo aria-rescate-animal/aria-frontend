@@ -1,4 +1,3 @@
-// Servicio de reportes - conecta con el backend NestJS
 import axios from 'axios';
 import { obtenerToken } from '../utils/auth.utils';
 
@@ -14,13 +13,24 @@ export const obtenerReportes = async () => {
   return response.data;
 };
 
-// Crear un nuevo reporte
-export const crearReporte = async (datos) => {
-  const response = await axios.post(`${API_URL}/reportes`, datos, authHeader());
+// Crear reporte — usa FormData para enviar foto como archivo real (no base64)
+export const crearReporte = async ({ especie, descripcion, ubicacion, fotoFile }) => {
+  const formData = new FormData();
+  formData.append('especie', especie);
+  formData.append('descripcion', descripcion);
+  formData.append('ubicacion', ubicacion);
+  if (fotoFile) formData.append('foto', fotoFile);
+
+  const response = await axios.post(`${API_URL}/reportes`, formData, {
+    headers: {
+      Authorization: `Bearer ${obtenerToken()}`,
+      // No pongas Content-Type aquí — axios lo setea automáticamente con el boundary correcto
+    }
+  });
   return response.data;
 };
 
-// Actualizar estado de un reporte
+// Actualizar estado (solo veterinaria)
 export const actualizarEstado = async (id, estado) => {
   const response = await axios.patch(
     `${API_URL}/reportes/${id}/estado`,

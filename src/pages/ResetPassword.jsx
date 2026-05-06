@@ -1,114 +1,123 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { resetPassword } from '../services/auth.service';
+import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import axios from 'axios';
+
+const API = 'http://localhost:3000/api/auth';
 
 export default function ResetPassword() {
-  const [form, setForm] = useState({ contrasena: '', confirmar: '' });
-  const [errors, setErrors] = useState({});
+  const [params]          = useSearchParams();
+  const token             = params.get('token') || '';
+  const [form, setForm]   = useState({ contrasena: '', confirmar: '' });
+  const [showPw, setShowPw]   = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [error, setError]     = useState('');
+  const [exito, setExito]     = useState(false);
   const navigate = useNavigate();
-  const token = searchParams.get('token');
 
-  const validar = () => {
-    const nuevosErrores = {};
-    if (!form.contrasena) nuevosErrores.contrasena = 'La contraseña es obligatoria';
-    else if (form.contrasena.length < 8) nuevosErrores.contrasena = 'La contraseña debe tener mínimo 8 caracteres';
-    if (!form.confirmar) nuevosErrores.confirmar = 'Debes confirmar tu contraseña';
-    else if (form.contrasena !== form.confirmar) nuevosErrores.confirmar = 'Las contraseñas no coinciden';
-    return nuevosErrores;
-  };
+  if (!token) return (
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={{ ...s.iconWrap, background: '#fef2f2' }}>
+          <AlertCircle size={28} color="#dc2626" />
+        </div>
+        <h1 style={s.titulo}>Enlace inválido</h1>
+        <p style={s.subtitulo}>Este enlace de recuperación no es válido o ha expirado.</p>
+        <Link to="/recuperar" style={s.btnPrimario}>Solicitar nuevo enlace</Link>
+      </div>
+    </div>
+  );
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
-  };
+  if (exito) return (
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={{ ...s.iconWrap, background: '#f0fdf4' }}>
+          <CheckCircle2 size={28} color="#16a34a" />
+        </div>
+        <h1 style={s.titulo}>Contraseña actualizada</h1>
+        <p style={s.subtitulo}>Tu contraseña fue cambiada correctamente. Ya puedes iniciar sesión.</p>
+        <Link to="/login" style={s.btnPrimario}>Iniciar sesión</Link>
+      </div>
+    </div>
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const erroresEncontrados = validar();
-    if (Object.keys(erroresEncontrados).length > 0) { setErrors(erroresEncontrados); return; }
-    if (!token) { setErrors({ general: 'El enlace de recuperación no es válido o ha expirado' }); return; }
+    if (form.contrasena.length < 8) { setError('Mínimo 8 caracteres'); return; }
+    if (form.contrasena !== form.confirmar) { setError('Las contraseñas no coinciden'); return; }
     try {
       setLoading(true);
-      await resetPassword(token, form.contrasena);
-      alert('Contraseña actualizada correctamente. Ahora puedes iniciar sesión.');
-      navigate('/login');
+      await axios.post(`${API}/reset-password`, { token, contrasena: form.contrasena });
+      setExito(true);
     } catch (err) {
-      if (err.response?.status === 400) setErrors({ general: 'El enlace ha expirado o ya fue usado. Solicita uno nuevo.' });
-      else if (err.code === 'ERR_NETWORK') setErrors({ general: 'No se pudo conectar con el servidor. Intenta más tarde.' });
-      else setErrors({ general: 'Error al actualizar la contraseña. Intenta de nuevo.' });
+      setError(err.response?.data?.error || 'Error al actualizar. El enlace puede haber expirado.');
     } finally { setLoading(false); }
   };
 
-  const inputStyle = (campo) => ({ ...styles.input, border: errors[campo] ? '1.5px solid #C0392B' : '1.5px solid #BBDEFB', background: errors[campo] ? '#FFF8F8' : '#F8FBFF' });
-
   return (
-    <div style={styles.container}>
-      <div style={styles.leftPanel}>
-        <div style={styles.logoArea}>
-          <div style={styles.logoIcon}>🐾</div>
-          <h1 style={styles.logoTitle}>ARIA</h1>
-          <p style={styles.logoSubtitle}>Aplicación para el Rescate<br />Inteligente de Animales</p>
-          <div style={styles.tagline}>
-            <span style={styles.tagItem}>Atención veterinaria</span>
-            <span style={styles.tagItem}>Geolocalización</span>
-            <span style={styles.tagItem}>IA integrada</span>
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={s.iconWrap}>
+          <Lock size={28} color="#2563eb" />
+        </div>
+        <h1 style={s.titulo}>Nueva contraseña</h1>
+        <p style={s.subtitulo}>Ingresa y confirma tu nueva contraseña.</p>
+
+        <form onSubmit={handleSubmit} style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={s.label}>Nueva contraseña</label>
+            <div style={{ position: 'relative', marginTop: '0.3rem' }}>
+              <Lock size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={form.contrasena}
+                onChange={e => { setForm(f => ({ ...f, contrasena: e.target.value })); setError(''); }}
+                placeholder="Mínimo 8 caracteres"
+                style={{ ...s.input, paddingLeft: '2.25rem', paddingRight: '2.5rem' }}
+              />
+              <button type="button" onClick={() => setShowPw(v => !v)} style={s.eyeBtn}>
+                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
           </div>
-        </div>
-        <div style={styles.decorCircle1} /><div style={styles.decorCircle2} /><div style={styles.decorCircle3} />
-      </div>
-      <div style={styles.rightPanel}>
-        <div style={styles.card}>
-          <div style={styles.badge}>✦ Nueva contraseña</div>
-          <h2 style={styles.title}>Restablecer contraseña</h2>
-          <p style={styles.subtitle}>Escribe tu nueva contraseña para recuperar el acceso</p>
-          {errors.general && <div style={styles.errorGeneral}>⚠️ {errors.general}</div>}
-          <form onSubmit={handleSubmit}>
-            <div style={styles.group}>
-              <label style={styles.label}>Nueva contraseña</label>
-              <input style={inputStyle('contrasena')} type="password" name="contrasena" value={form.contrasena} onChange={handleChange} placeholder="Mínimo 8 caracteres" />
-              {errors.contrasena && <span style={styles.errorMsg}>⚠ {errors.contrasena}</span>}
+
+          <div>
+            <label style={s.label}>Confirmar contraseña</label>
+            <div style={{ position: 'relative', marginTop: '0.3rem' }}>
+              <Lock size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              <input
+                type={showPw2 ? 'text' : 'password'}
+                value={form.confirmar}
+                onChange={e => { setForm(f => ({ ...f, confirmar: e.target.value })); setError(''); }}
+                placeholder="Repite tu contraseña"
+                style={{ ...s.input, paddingLeft: '2.25rem', paddingRight: '2.5rem' }}
+              />
+              <button type="button" onClick={() => setShowPw2(v => !v)} style={s.eyeBtn}>
+                {showPw2 ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
-            <div style={styles.group}>
-              <label style={styles.label}>Confirmar contraseña</label>
-              <input style={inputStyle('confirmar')} type="password" name="confirmar" value={form.confirmar} onChange={handleChange} placeholder="Repite tu nueva contraseña" />
-              {errors.confirmar && <span style={styles.errorMsg}>⚠ {errors.confirmar}</span>}
-            </div>
-            <button style={{ ...styles.button, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }} type="submit" disabled={loading}>
-              {loading ? '⏳ Actualizando...' : '🔐 Actualizar contraseña'}
-            </button>
-          </form>
-          <p style={styles.link}><Link to="/login" style={styles.linkAnchor}>← Volver al inicio de sesión</Link></p>
-        </div>
+          </div>
+
+          {error && <p style={{ color: '#dc2626', fontSize: '0.75rem', margin: 0, textAlign: 'left' }}>{error}</p>}
+
+          <button type="submit" disabled={loading} style={{ ...s.btnPrimario, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer', border: 'none', marginTop: '0.25rem' }}>
+            {loading ? 'Actualizando...' : 'Cambiar contraseña'}
+          </button>
+        </form>
       </div>
     </div>
   );
 }
 
-const styles = {
-  container: { minHeight: '100vh', display: 'flex', flexWrap: 'wrap', background: '#F0F6FF' },
-  leftPanel: { flex: '1 1 320px', background: 'linear-gradient(160deg, #0A2463 0%, #1565C0 55%, #0097A7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2.5rem', position: 'relative', overflow: 'hidden', minHeight: '220px' },
-  logoArea: { textAlign: 'center', zIndex: 1, position: 'relative' },
-  logoIcon: { fontSize: '4.5rem', marginBottom: '0.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' },
-  logoTitle: { color: 'white', fontSize: '3.2rem', fontWeight: '800', margin: '0', letterSpacing: '8px' },
-  logoSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: '0.95rem', marginTop: '0.75rem', lineHeight: '1.7' },
-  tagline: { marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  tagItem: { color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.12)', padding: '0.35rem 0.9rem', borderRadius: '20px', display: 'inline-block' },
-  decorCircle1: { position: 'absolute', width: '320px', height: '320px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: '-100px', right: '-100px' },
-  decorCircle2: { position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(0,151,167,0.2)', bottom: '-70px', left: '-50px' },
-  decorCircle3: { position: 'absolute', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)', bottom: '80px', right: '30px' },
-  rightPanel: { flex: '1 1 320px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' },
-  card: { background: 'white', padding: '2.5rem', borderRadius: '20px', boxShadow: '0 8px 40px rgba(10,36,99,0.12)', width: '100%', maxWidth: '440px' },
-  badge: { display: 'inline-block', background: '#E3F2FD', color: '#1565C0', padding: '0.3rem 0.9rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600', marginBottom: '1rem' },
-  title: { color: '#0A2463', fontSize: '1.8rem', fontWeight: '700', margin: '0 0 0.25rem 0' },
-  subtitle: { color: '#888', fontSize: '0.88rem', marginBottom: '1.5rem', lineHeight: '1.5' },
-  errorGeneral: { background: '#FFF0F0', color: '#C0392B', padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.9rem', border: '1px solid #FADADD' },
-  errorMsg: { color: '#C0392B', fontSize: '0.8rem', marginTop: '0.3rem', display: 'block' },
-  group: { marginBottom: '1.1rem' },
-  label: { display: 'block', marginBottom: '0.4rem', color: '#0A2463', fontSize: '0.88rem', fontWeight: '600' },
-  input: { width: '100%', padding: '0.8rem 1rem', borderRadius: '10px', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none', color: '#333' },
-  button: { width: '100%', padding: '0.9rem', background: 'linear-gradient(90deg, #1565C0, #0097A7)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', marginTop: '0.75rem', boxShadow: '0 4px 15px rgba(21,101,192,0.35)' },
-  link: { textAlign: 'center', marginTop: '1.25rem', fontSize: '0.9rem' },
-  linkAnchor: { color: '#1565C0', fontWeight: '600', textDecoration: 'none' }
+const s = {
+  page: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: 'system-ui, sans-serif' },
+  card: { background: 'white', borderRadius: '20px', padding: '2.5rem', width: '100%', maxWidth: '400px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', textAlign: 'center' },
+  iconWrap: { width: '56px', height: '56px', background: '#eff6ff', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' },
+  titulo: { margin: '0 0 0.5rem', fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' },
+  subtitulo: { margin: 0, color: '#64748b', fontSize: '0.875rem', lineHeight: 1.6 },
+  label: { fontSize: '0.8rem', fontWeight: '600', color: '#374151', display: 'block', textAlign: 'left' },
+  input: { width: '100%', padding: '0.65rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box' },
+  eyeBtn: { position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' },
+  btnPrimario: { width: '100%', padding: '0.8rem', background: '#2563eb', color: 'white', borderRadius: '12px', fontWeight: '700', fontSize: '0.875rem', cursor: 'pointer', display: 'block', textAlign: 'center', textDecoration: 'none' },
 };
