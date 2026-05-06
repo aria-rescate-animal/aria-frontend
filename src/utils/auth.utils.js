@@ -23,7 +23,6 @@ export const obtenerRol = () => {
 };
 
 export const redirigirSegunRol = (navigate, rol) => {
-  if (rol === 'admin') navigate('/admin');
-  else if (rol === 'rescatista') navigate('/rescatista');
-  else navigate('/dashboard');
+  if (rol === 'administrador') navigate('/admin', { replace: true });
+  else navigate('/dashboard', { replace: true });
 };

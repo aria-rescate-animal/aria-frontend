@@ -1,30 +1,38 @@
 // Issue #14 - Configuracion de Rutas y Navegacion Base
-import { Link, useLocation } from 'react-router-dom';
-import { obtenerUsuario, eliminarToken } from '../utils/auth.utils';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Notificaciones from './Notificaciones';
 
-const navLinks = [
-  { icon: '🏠', label: 'Inicio', path: '/dashboard' },
-  { icon: '🐾', label: 'Rescates', path: '/reportes' },
+// Links para ciudadano
+const LINKS_CIUDADANO = [
+  { icon: '🏠', label: 'Inicio',        path: '/dashboard' },
+  { icon: '🐾', label: 'Rescates',      path: '/reportes' },
   { icon: '➕', label: 'Nuevo reporte', path: '/nuevo-reporte' },
-  { icon: '👤', label: 'Perfil', path: '/perfil' },
+];
+
+// Links para veterinaria — sin "Nuevo reporte"
+const LINKS_VETERINARIA = [
+  { icon: '🏠', label: 'Inicio',           path: '/dashboard' },
+  { icon: '📋', label: 'Gestión de casos', path: '/reportes' },
 ];
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = obtenerUsuario();
+  const { user, logout, puedeRescatar } = useAuth();
+
+  const navLinks = puedeRescatar ? LINKS_VETERINARIA : LINKS_CIUDADANO;
 
   const handleLogout = () => {
-    eliminarToken();
-    navigate('/login');
+    logout();
+    navigate('/login', { replace: true });
   };
 
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
         <Link to="/dashboard" style={styles.logo}>🐾 ARIA</Link>
+
         <div style={styles.links}>
           {navLinks.map((l) => (
             <Link
@@ -39,6 +47,7 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
+
         <div style={styles.right}>
           <span style={styles.userName}>{user?.nombre?.split(' ')[0] || 'Usuario'}</span>
           <Notificaciones />
