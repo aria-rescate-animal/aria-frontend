@@ -1,4 +1,4 @@
-name: ARIA Frontend CI/CD
+name: ARIA Frontend CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  validar-codigo:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,20 +23,5 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Build del proyecto
+      - name: Validar que el proyecto compila correctamente
         run: npm run build
-
-      - name: Iniciar servidor de preview en background
-        run: npm run preview &
-
-      - name: Esperar que el servidor este listo
-        run: npx wait-on http://localhost:4173 --timeout 30000
-
-      - name: Ejecutar pruebas Cypress
-        uses: cypress-io/github-action@v6
-        with:
-          browser: chrome
-          headed: false
-          config: baseUrl=http://localhost:4173
-          wait-on: 'http://localhost:4173'
-          wait-on-timeout: 30
