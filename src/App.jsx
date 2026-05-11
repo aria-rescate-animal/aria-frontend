@@ -9,6 +9,7 @@ import Dashboard         from './pages/Dashboard';
 import Perfil            from './pages/Perfil';
 import Feed              from './pages/Feed';
 import NuevoReporte      from './pages/NuevoReporte';
+import MisReportes       from './pages/MisReportes';
 import AdminPanel        from './pages/AdminPanel';
 import MainLayout        from './components/MainLayout';
 import { useAuth }       from './context/AuthContext';
@@ -30,25 +31,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Públicas */}
         <Route path="/"                      element={<Navigate to="/login" />} />
         <Route path="/login"                 element={<Login />} />
         <Route path="/register"              element={<Register />} />
         <Route path="/verificar-codigo"      element={<VerificarCodigo />} />
         <Route path="/recuperar"             element={<RecuperarPassword />} />
         <Route path="/reset-password"        element={<ResetPassword />} />
-
-        {/* Callbacks de OAuth y Magic Link */}
         <Route path="/auth/callback"         element={<AuthCallback />} />
         <Route path="/auth/verificar/:token" element={<AuthCallback />} />
-
-        {/* Protegidas con MainLayout */}
-        <Route path="/dashboard"     element={<RutaProtegida><Dashboard /></RutaProtegida>} />
-        <Route path="/perfil"        element={<RutaProtegida><Perfil /></RutaProtegida>} />
-        <Route path="/reportes"      element={<RutaProtegida><Feed /></RutaProtegida>} />
-        <Route path="/nuevo-reporte" element={<RutaProtegida><NuevoReporte /></RutaProtegida>} />
-
-        {/* Admin */}
+        <Route path="/dashboard"      element={<RutaProtegida><Dashboard /></RutaProtegida>} />
+        <Route path="/perfil"         element={<RutaProtegida><Perfil /></RutaProtegida>} />
+        <Route path="/reportes"       element={<RutaProtegida><Feed /></RutaProtegida>} />
+        <Route path="/mis-reportes"   element={<RutaProtegida><MisReportes /></RutaProtegida>} />
+        <Route path="/nuevo-reporte"  element={<RutaProtegida><NuevoReporte /></RutaProtegida>} />
         <Route path="/admin" element={<RutaAdmin><AdminPanel /></RutaAdmin>} />
       </Routes>
     </BrowserRouter>

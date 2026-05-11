@@ -13,7 +13,16 @@ export const obtenerReportes = async () => {
   return response.data;
 };
 
-// Crear reporte — usa FormData para enviar foto como archivo real (no base64)
+// Obtener solo los reportes del usuario autenticado (ciudadano)
+export const obtenerMisReportes = async (page = 1, limit = 20) => {
+  const response = await axios.get(
+    `${API_URL}/reportes/mis-reportes?page=${page}&limit=${limit}`,
+    authHeader()
+  );
+  return response.data;
+};
+
+// Crear reporte
 export const crearReporte = async ({ especie, descripcion, ubicacion, fotoFile }) => {
   const formData = new FormData();
   formData.append('especie', especie);
@@ -22,15 +31,12 @@ export const crearReporte = async ({ especie, descripcion, ubicacion, fotoFile }
   if (fotoFile) formData.append('foto', fotoFile);
 
   const response = await axios.post(`${API_URL}/reportes`, formData, {
-    headers: {
-      Authorization: `Bearer ${obtenerToken()}`,
-      // No pongas Content-Type aquí — axios lo setea automáticamente con el boundary correcto
-    }
+    headers: { Authorization: `Bearer ${obtenerToken()}` }
   });
   return response.data;
 };
 
-// Actualizar estado (solo veterinaria)
+// Actualizar estado (solo entidades/admin)
 export const actualizarEstado = async (id, estado) => {
   const response = await axios.patch(
     `${API_URL}/reportes/${id}/estado`,

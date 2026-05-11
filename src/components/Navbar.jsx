@@ -1,17 +1,15 @@
-// Issue #14 - Configuracion de Rutas y Navegacion Base
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Notificaciones from './Notificaciones';
 
-// Links para ciudadano
 const LINKS_CIUDADANO = [
   { icon: '🏠', label: 'Inicio',        path: '/dashboard' },
-  { icon: '🐾', label: 'Rescates',      path: '/reportes' },
+  { icon: '🐾', label: 'Feed de casos', path: '/reportes' },
+  { icon: '📋', label: 'Mis reportes',  path: '/mis-reportes' },
   { icon: '➕', label: 'Nuevo reporte', path: '/nuevo-reporte' },
 ];
 
-// Links para veterinaria — sin "Nuevo reporte"
-const LINKS_VETERINARIA = [
+const LINKS_ENTIDAD = [
   { icon: '🏠', label: 'Inicio',           path: '/dashboard' },
   { icon: '📋', label: 'Gestión de casos', path: '/reportes' },
 ];
@@ -21,7 +19,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout, puedeRescatar } = useAuth();
 
-  const navLinks = puedeRescatar ? LINKS_VETERINARIA : LINKS_CIUDADANO;
+  const navLinks = puedeRescatar ? LINKS_ENTIDAD : LINKS_CIUDADANO;
 
   const handleLogout = () => {
     logout();
@@ -32,22 +30,14 @@ export default function Navbar() {
     <nav style={styles.nav}>
       <div style={styles.inner}>
         <Link to="/dashboard" style={styles.logo}>🐾 ARIA</Link>
-
         <div style={styles.links}>
           {navLinks.map((l) => (
-            <Link
-              key={l.path}
-              to={l.path}
-              style={{
-                ...styles.link,
-                ...(location.pathname === l.path ? styles.linkActive : {})
-              }}
-            >
+            <Link key={l.path} to={l.path}
+              style={{ ...styles.link, ...(location.pathname === l.path ? styles.linkActive : {}) }}>
               {l.icon} {l.label}
             </Link>
           ))}
         </div>
-
         <div style={styles.right}>
           <span style={styles.userName}>{user?.nombre?.split(' ')[0] || 'Usuario'}</span>
           <Notificaciones />
@@ -59,13 +49,13 @@ export default function Navbar() {
 }
 
 const styles = {
-  nav: { background: 'var(--aria-gradient-navbar)', boxShadow: 'var(--aria-shadow-navbar)', position: 'sticky', top: 0, zIndex: 100 },
-  inner: { maxWidth: '1100px', margin: '0 auto', padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', height: '58px' },
-  logo: { color: 'white', fontWeight: '800', fontSize: '1.2rem', textDecoration: 'none', letterSpacing: '3px', flexShrink: 0 },
-  links: { display: 'flex', gap: '0.25rem', flex: 1, flexWrap: 'wrap' },
-  link: { color: 'rgba(255,255,255,0.8)', textDecoration: 'none', padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '500', transition: 'background 0.15s' },
+  nav:        { background: 'var(--aria-gradient-navbar)', boxShadow: 'var(--aria-shadow-navbar)', position: 'sticky', top: 0, zIndex: 100 },
+  inner:      { maxWidth: '1100px', margin: '0 auto', padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', height: '58px' },
+  logo:       { color: 'white', fontWeight: '800', fontSize: '1.2rem', textDecoration: 'none', letterSpacing: '3px', flexShrink: 0 },
+  links:      { display: 'flex', gap: '0.25rem', flex: 1, flexWrap: 'wrap' },
+  link:       { color: 'rgba(255,255,255,0.8)', textDecoration: 'none', padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '500', transition: 'background 0.15s' },
   linkActive: { background: 'rgba(255,255,255,0.18)', color: 'white', fontWeight: '700' },
-  right: { display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
-  userName: { color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem' },
-  logoutBtn: { background: 'rgba(255,255,255,0.12)', border: 'none', color: 'white', borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '1rem' },
+  right:      { display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
+  userName:   { color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem' },
+  logoutBtn:  { background: 'rgba(255,255,255,0.12)', border: 'none', color: 'white', borderRadius: '8px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '1rem' },
 };
