@@ -1,259 +1,120 @@
-/* ============================================
-   ARIA - Variables globales de diseño
-   ============================================ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  /* Colores primarios */
-  --aria-azul-oscuro: #0A2463;
-  --aria-azul: #1565C0;
-  --aria-cyan: #0097A7;
+  --background:    oklch(0.96 0.008 240);
+  --foreground:    oklch(0.13 0.03 250);
+  --card:          oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.03 250);
+  --popover:       oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.03 250);
+  --primary:       oklch(0.22 0.07 255);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary:     oklch(0.94 0.01 240);
+  --secondary-foreground: oklch(0.25 0.06 250);
+  --muted:         oklch(0.93 0.01 240);
+  --muted-foreground: oklch(0.46 0.03 250);
+  --accent:        oklch(0.65 0.15 185);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive:   oklch(0.58 0.24 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --success:       oklch(0.62 0.17 155);
+  --success-foreground: oklch(0.98 0 0);
+  --warning:       oklch(0.76 0.16 75);
+  --warning-foreground: oklch(0.18 0.05 60);
+  --border:        oklch(0.88 0.012 235);
+  --input:         oklch(0.88 0.012 235);
+  --ring:          oklch(0.65 0.15 185);
+  --radius:        0.5rem;
 
-  /* Gradientes */
-  --aria-gradient-panel: linear-gradient(160deg, #0A2463 0%, #1565C0 55%, #0097A7 100%);
-  --aria-gradient-btn: linear-gradient(90deg, #1565C0, #0097A7);
-  --aria-gradient-navbar: linear-gradient(90deg, #0A2463, #1565C0);
+  --sidebar:       oklch(0.17 0.055 258);
+  --sidebar-foreground: oklch(0.90 0.012 225);
+  --sidebar-accent: oklch(0.26 0.075 258);
+  --sidebar-accent-foreground: oklch(0.95 0.01 225);
+  --sidebar-border: oklch(0.26 0.065 258);
+  --sidebar-ring:  oklch(0.65 0.15 185);
+  --sidebar-primary: oklch(0.65 0.15 185);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
 
-  /* Fondos */
-  --aria-bg-page: #F0F6FF;
-  --aria-bg-card: #ffffff;
-  --aria-bg-input: #F8FBFF;
-  --aria-bg-badge: #E3F2FD;
-  --aria-bg-input-error: #FFF8F8;
-  --aria-bg-error: #FFF0F0;
-  --aria-bg-success: #E8F5E9;
-  --aria-bg-warning: #FFF8E1;
-
-  /* Bordes */
-  --aria-border: #BBDEFB;
-  --aria-border-error: #C62828;
-  --aria-border-error-light: #FADADD;
-  --aria-border-success: #C8E6C9;
-
-  /* Textos */
-  --aria-texto-titulo: #0A2463;
-  --aria-texto-subtitulo: #888888;
-  --aria-texto-label: #0A2463;
-  --aria-texto-error: #C0392B;
-  --aria-texto-success: #2E7D32;
-  --aria-texto-warning: #E65100;
-  --aria-texto-muted: #666666;
-  --aria-texto-link: #1565C0;
-
-  /* Sombras */
-  --aria-shadow-card: 0 8px 40px rgba(10, 36, 99, 0.12);
-  --aria-shadow-btn: 0 4px 15px rgba(21, 101, 192, 0.35);
-  --aria-shadow-navbar: 0 2px 12px rgba(10, 36, 99, 0.2);
-
-  /* Bordes redondeados */
-  --aria-radius-sm: 8px;
-  --aria-radius-md: 10px;
-  --aria-radius-lg: 16px;
-  --aria-radius-xl: 20px;
-  --aria-radius-full: 9999px;
-
-  /* Tipografía */
-  --aria-font: system-ui, 'Segoe UI', Roboto, sans-serif;
-
-  /* Estados de reporte */
-  --aria-urgente-color: #C62828;
-  --aria-urgente-bg: #FFEBEE;
-  --aria-proceso-color: #E65100;
-  --aria-proceso-bg: #FFF3E0;
-  --aria-rescatado-color: #2E7D32;
-  --aria-rescatado-bg: #E8F5E9;
+  --navy:       oklch(0.17 0.055 258);
+  --navy-light: oklch(0.24 0.07 254);
+  --teal:       oklch(0.62 0.16 187);
+  --teal-light: oklch(0.72 0.13 182);
+  --teal-dark:  oklch(0.52 0.13 192);
 }
 
-/* ============================================
-   Reset y estilos base
-   ============================================ */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@theme inline {
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+  --color-card:         var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary:      var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:    var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:        var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent:       var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive:  var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success:      var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning:      var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border:       var(--border);
+  --color-input:        var(--input);
+  --color-ring:         var(--ring);
+  --color-sidebar:      var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-navy:       var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-teal:       var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-teal-dark:  var(--teal-dark);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
-body {
-  font-family: var(--aria-font);
-  background: var(--aria-bg-page);
-  color: var(--aria-texto-muted);
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05); }
 }
 
-#root {
-  min-height: 100vh;
-  width: 100%;
-  max-width: 100%;
-  text-align: left;
-  border: none;
-}
-
-/* ============================================
-   Clases utilitarias globales
-   ============================================ */
-
-/* Botón primario */
-.aria-btn-primary {
-  width: 100%;
-  padding: 0.9rem;
-  background: var(--aria-gradient-btn);
-  color: white;
-  border: none;
-  border-radius: var(--aria-radius-md);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: var(--aria-shadow-btn);
-  transition: all 0.2s;
-  letter-spacing: 0.5px;
-}
-
-.aria-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.45);
-}
-
-.aria-btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Botón secundario */
-.aria-btn-secondary {
-  padding: 0.85rem;
-  background: var(--aria-bg-page);
-  color: var(--aria-texto-link);
-  border: 1.5px solid var(--aria-border);
-  border-radius: var(--aria-radius-md);
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-/* Input base */
-.aria-input {
-  width: 100%;
-  padding: 0.8rem 1rem;
-  border-radius: var(--aria-radius-md);
-  border: 1.5px solid var(--aria-border);
-  background: var(--aria-bg-input);
-  font-size: 0.95rem;
-  color: #333;
-  outline: none;
-  transition: border 0.2s, box-shadow 0.2s;
-  font-family: var(--aria-font);
-}
-
-.aria-input:focus {
-  border-color: var(--aria-azul);
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.13);
-}
-
-.aria-input.error {
-  border-color: var(--aria-border-error);
-  background: var(--aria-bg-input-error);
-}
-
-/* Label */
-.aria-label {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--aria-texto-label);
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-/* Mensaje de error */
-.aria-error-msg {
-  color: var(--aria-texto-error);
-  font-size: 0.8rem;
-  margin-top: 0.3rem;
-  display: block;
-}
-
-/* Card */
-.aria-card {
-  background: var(--aria-bg-card);
-  border-radius: var(--aria-radius-xl);
-  box-shadow: var(--aria-shadow-card);
-  padding: 2.5rem;
-}
-
-/* Badge */
-.aria-badge {
-  display: inline-block;
-  background: var(--aria-bg-badge);
-  color: var(--aria-azul);
-  padding: 0.3rem 0.9rem;
-  border-radius: var(--aria-radius-full);
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-/* Link */
-.aria-link {
-  color: var(--aria-texto-link);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.aria-link:hover {
-  text-decoration: underline;
-}
-
-/* Alerta de error general */
-.aria-alert-error {
-  background: var(--aria-bg-error);
-  color: var(--aria-texto-error);
-  padding: 0.75rem 1rem;
-  border-radius: var(--aria-radius-md);
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  border: 1px solid var(--aria-border-error-light);
-}
-
-/* Alerta de éxito */
-.aria-alert-success {
-  background: var(--aria-bg-success);
-  color: var(--aria-texto-success);
-  padding: 0.75rem 1rem;
-  border-radius: var(--aria-radius-md);
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  border: 1px solid var(--aria-border-success);
-  text-align: center;
-}
-
-/* Panel izquierdo (auth) */
-.aria-left-panel {
-  flex: 1 1 320px;
-  background: var(--aria-gradient-panel);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2.5rem;
-  position: relative;
-  overflow: hidden;
-  min-height: 220px;
-}
-
-/* Animaciones globales */
-@keyframes aria-fadeSlideIn {
-  from { opacity: 0; transform: translateY(24px); }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+.animate-fade-in-up-delay-1 { animation: fadeInUp 0.45s ease-out 0.08s both; }
+.animate-fade-in-up-delay-2 { animation: fadeInUp 0.45s ease-out 0.16s both; }
+.animate-fade-in-up-delay-3 { animation: fadeInUp 0.45s ease-out 0.24s both; }
+.animate-fade-in-up-delay-4 { animation: fadeInUp 0.45s ease-out 0.32s both; }
 
-@keyframes aria-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+@keyframes shimmerMove {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(120%); }
 }
-
-@keyframes aria-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes aria-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: shimmerMove 2.8s ease-in-out infinite;
 }

@@ -1,299 +1,316 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { register as registerApi } from '@/services/auth.service'
 import {
-  Eye, EyeOff, User, Building2, CheckCircle2,
-  AlertCircle, Lock, Mail, Phone, MapPin, Link2, FileText, PawPrint
-} from 'lucide-react';
-import { register } from '../services/auth.service';
+  PawPrint, User, Mail, Lock, ArrowRight, Building2,
+  Phone, MapPin, Hash, Globe, ChevronDown, UserCheck, ArrowLeft
+} from 'lucide-react'
 
-function strengthInfo(pw) {
-  if (!pw) return null;
-  let s = 0;
-  if (pw.length >= 8) s++;
-  if (pw.length >= 12) s++;
-  if (/[A-Z]/.test(pw)) s++;
-  if (/[0-9]/.test(pw)) s++;
-  if (/[^A-Za-z0-9]/.test(pw)) s++;
-  const levels = [null,
-    { label: 'Debil',     color: '#ef4444', w: '20%' },
-    { label: 'Regular',   color: '#f97316', w: '40%' },
-    { label: 'Buena',     color: '#eab308', w: '60%' },
-    { label: 'Fuerte',    color: '#22c55e', w: '80%' },
-    { label: 'Excelente', color: '#10b981', w: '100%' },
-  ];
-  return levels[Math.min(s, 5)];
+const TIPOS_ENTIDAD = [
+  { value: 'veterinaria',          label: 'Veterinaria' },
+  { value: 'fundacion',            label: 'Fundación' },
+  { value: 'autoridad_ambiental',  label: 'Autoridad Ambiental' },
+  { value: 'rescatista_organizado',label: 'Rescatista Organizado' },
+  { value: 'hogar_temporal',       label: 'Hogar Temporal' },
+  { value: 'otra',                 label: 'Otra' },
+]
+
+const SERVICIOS = [
+  { value: 'rescate_calle',         label: 'Rescate de animales en calle' },
+  { value: 'atencion_veterinaria',  label: 'Atención veterinaria' },
+  { value: 'hogar_temporal',        label: 'Hogar temporal' },
+  { value: 'maltrato',              label: 'Casos de maltrato' },
+  { value: 'cautiverio',            label: 'Casos de cautiverio' },
+  { value: 'fauna_silvestre',       label: 'Fauna silvestre' },
+  { value: 'adopcion_seguimiento',  label: 'Adopción y seguimiento' },
+]
+
+const SERVICIOS_VALIDOS = SERVICIOS.map(s => s.value)
+const onlyDigits = (value) => String(value || '').replace(/\D/g, '')
+const limitDigits = (value, max = 15) => onlyDigits(value).slice(0, max)
+const isValidUrl = (value) => !value || /^https?:\/\/.+\..+/.test(String(value).trim())
+const normalizarTelefono = (value) => onlyDigits(value)
+
+function validarEntidad(form) {
+  const nit = onlyDigits(form.nit)
+  const telefono = normalizarTelefono(form.telefono_oficial)
+  const servicios = Array.isArray(form.servicios_ofrecidos) ? form.servicios_ofrecidos : []
+
+  if (!nit) return 'El NIT es requerido.'
+  if (nit.length < 9 || nit.length > 10) return 'El NIT debe tener 9 dígitos, o 10 si incluye dígito de verificación.'
+  if (!form.nombre_organizacion.trim()) return 'El nombre de la organización es requerido.'
+  if (form.nombre_organizacion.trim().length < 3 || form.nombre_organizacion.trim().length > 100) return 'El nombre de la organización debe tener entre 3 y 100 caracteres.'
+  if (!form.tipo_entidad || !TIPOS_ENTIDAD.some(t => t.value === form.tipo_entidad)) return 'Selecciona un tipo de entidad válido.'
+  if (!telefono) return 'El teléfono oficial es requerido.'
+  if (telefono.length !== 10) return 'El teléfono oficial colombiano debe tener 10 dígitos.'
+  if (!form.ciudad.trim()) return 'La ciudad es requerida.'
+  if (form.ciudad.trim().length < 2 || form.ciudad.trim().length > 100) return 'La ciudad debe tener entre 2 y 100 caracteres.'
+  if (!form.representante.trim()) return 'El nombre del representante es requerido.'
+  if (form.representante.trim().length < 3 || form.representante.trim().length > 100) return 'El representante debe tener entre 3 y 100 caracteres.'
+  if (!form.descripcion_entidad.trim() || form.descripcion_entidad.trim().length < 20) return 'La descripción debe tener al menos 20 caracteres.'
+  if (form.descripcion_entidad.trim().length > 800) return 'La descripción debe tener máximo 800 caracteres.'
+  if (form.direccion_sede.trim().length > 200) return 'La dirección de sede debe tener máximo 200 caracteres.'
+  if (form.enlace_verificacion.trim().length > 255) return 'El sitio web debe tener máximo 255 caracteres.'
+  if (!isValidUrl(form.enlace_verificacion.trim())) return 'El sitio web debe iniciar con http:// o https://.'
+  if (servicios.length === 0 || servicios.some(s => !SERVICIOS_VALIDOS.includes(s))) return 'Selecciona al menos un servicio ofrecido válido.'
+  return ''
 }
 
-const TIPOS_ENTIDAD = ['Fundación', 'Clínica Privada', 'Entidad Gubernamental'];
-const API_BASE = 'http://localhost:3000/api/auth';
-
 export default function Register() {
+  const navigate = useNavigate()
+  const [rol, setRol]   = useState('ciudadano')
   const [form, setForm] = useState({
-    nombre: '', email: '', contrasena: '', confirmar: '', rol: 'ciudadano',
+    nombre: '', email: '', contrasena: '',
     nit: '', nombre_organizacion: '', tipo_entidad: '',
-    telefono_oficial: '', direccion_sede: '', enlace_verificacion: ''
-  });
-  const [errors, setErrors]   = useState({});
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw]   = useState(false);
-  const [showPw2, setShowPw2] = useState(false);
-  const navigate = useNavigate();
+    telefono_oficial: '', ciudad: '', representante: '',
+    descripcion_entidad: '', direccion_sede: '', enlace_verificacion: '',
+    servicios_ofrecidos: []
+  })
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const strength  = strengthInfo(form.contrasena);
-  const esEntidad = form.rol === 'entidad';
+  const entityError = useMemo(() => rol === 'entidad' ? validarEntidad(form) : '', [rol, form])
 
-  const handleChange = e => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-    if (errors[e.target.name]) setErrors(er => ({ ...er, [e.target.name]: '' }));
-  };
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const validar = () => {
-    const e = {};
-    if (!form.nombre.trim()) e.nombre = 'El nombre es obligatorio';
-    if (!form.email.trim())  e.email  = 'El correo es obligatorio';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Formato invalido';
-    if (!form.contrasena)    e.contrasena = 'La contrasena es obligatoria';
-    else if (form.contrasena.length < 8) e.contrasena = 'Minimo 8 caracteres';
-    if (form.contrasena !== form.confirmar) e.confirmar = 'Las contrasenas no coinciden';
-    if (esEntidad) {
-      if (!form.nit.trim())               e.nit               = 'El NIT es obligatorio';
-      if (!form.nombre_organizacion.trim()) e.nombre_organizacion = 'El nombre es obligatorio';
-      if (!form.tipo_entidad)             e.tipo_entidad      = 'Selecciona el tipo';
-      if (!form.telefono_oficial.trim())  e.telefono_oficial  = 'El telefono es obligatorio';
-    }
-    return e;
-  };
+  const setLimitedDigits = (key, max = 15) => (value) => {
+    setForm(f => ({ ...f, [key]: limitDigits(value, max) }))
+  }
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    const errs = validar();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+  const handleNIT = (e) => setLimitedDigits('nit', 10)(e.target.value)
+  const handleTel = (e) => setLimitedDigits('telefono_oficial', 10)(e.target.value)
+
+  const digitInputGuards = (key, max = 15) => ({
+    onBeforeInput: (e) => {
+      if (e.data && /\D/.test(e.data)) e.preventDefault()
+      const current = onlyDigits(e.currentTarget.value)
+      const selected = Math.max(0, (e.currentTarget.selectionEnd || 0) - (e.currentTarget.selectionStart || 0))
+      if (e.data && current.length - selected + onlyDigits(e.data).length > max) e.preventDefault()
+    },
+    onInput: (e) => {
+      const limpio = limitDigits(e.currentTarget.value, max)
+      if (e.currentTarget.value !== limpio) e.currentTarget.value = limpio
+      setLimitedDigits(key, max)(limpio)
+    },
+    onPaste: (e) => {
+      e.preventDefault()
+      const text = e.clipboardData.getData('text')
+      const target = e.currentTarget
+      const start = target.selectionStart || 0
+      const end = target.selectionEnd || 0
+      const next = `${target.value.slice(0, start)}${text}${target.value.slice(end)}`
+      setLimitedDigits(key, max)(next)
+    },
+    onKeyDown: (e) => {
+      const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End']
+      if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return
+      if (!/^\d$/.test(e.key)) e.preventDefault()
+    },
+  })
+
+  const toggleServicio = (val) => {
+    setForm(f => ({
+      ...f,
+      servicios_ofrecidos: f.servicios_ofrecidos.includes(val)
+        ? f.servicios_ofrecidos.filter(s => s !== val)
+        : [...f.servicios_ofrecidos, val]
+    }))
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    if (!form.nombre.trim() || form.nombre.trim().length < 2) return setError('El nombre debe tener al menos 2 caracteres.')
+    if (!form.email.trim()) return setError('El correo electrónico es requerido.')
+    if (!form.contrasena || form.contrasena.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.')
+    if (rol === 'entidad' && entityError) return setError(entityError)
+
+    setLoading(true)
     try {
-      setLoading(true);
-      const data = await register(
-        form.nombre, form.email, form.contrasena, form.rol,
-        form.nit, form.nombre_organizacion,
-        form.tipo_entidad, form.telefono_oficial,
-        form.direccion_sede, form.enlace_verificacion
-      );
-      // Siempre redirige a verificar OTP
-      navigate('/verificar-codigo', { state: { email: form.email, pendiente: data.pendiente } });
+      await registerApi(
+        form.nombre, form.email, form.contrasena, rol,
+        rol === 'entidad' ? form.nit : null,
+        rol === 'entidad' ? form.nombre_organizacion : null,
+        rol === 'entidad' ? form.tipo_entidad : null,
+        rol === 'entidad' ? normalizarTelefono(form.telefono_oficial) : null,
+        rol === 'entidad' ? form.ciudad : null,
+        rol === 'entidad' ? form.representante : null,
+        rol === 'entidad' ? form.descripcion_entidad : null,
+        rol === 'entidad' ? form.servicios_ofrecidos : null,
+        rol === 'entidad' ? form.direccion_sede : null,
+        rol === 'entidad' ? form.enlace_verificacion : null,
+      )
+      navigate('/verificar-codigo', { state: { email: form.email } })
     } catch (err) {
-      setErrors({ general: err.response?.data?.error || 'Error al registrarse. Intenta de nuevo.' });
-    } finally { setLoading(false); }
-  };
-
-  const handleGoogle = () => { window.location.href = `${API_BASE}/google`; };
+      setError(err.response?.data?.error || 'Error al crear la cuenta. Intenta de nuevo.')
+    } finally { setLoading(false) }
+  }
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <div style={{ width: '40px', height: '40px', background: '#2563eb', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PawPrint size={20} color="white" />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>Crear cuenta</h1>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>Plataforma ARIA — Rescate Animal</p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-sm">
+
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy text-white">
+              <PawPrint className="h-4 w-4" />
+            </div>
+            <span className="text-base font-bold text-foreground">Aria</span>
+          </Link>
+          <Link to="/" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver al inicio
+          </Link>
         </div>
 
-        {/* Botón Google */}
-        <button onClick={handleGoogle} style={s.btnGoogle}>
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          Registrarse con Google
-        </button>
+        <h1 className="text-xl font-bold text-foreground">Crear cuenta</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Únete a la red de rescate animal</p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1rem 0' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>o con correo</span>
-          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-        </div>
-
-        {errors.general && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.75rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-            <AlertCircle size={15} /><span>{errors.general}</span>
-          </div>
+        {error && (
+          <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">{error}</div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Selector de rol */}
-          <div>
-            <label style={s.label}>Tipo de cuenta</label>
-            <div style={s.rolGrid}>
-              {[
-                { value: 'ciudadano', label: 'Ciudadano',  desc: 'Reporta animales en calle', Icon: User },
-                { value: 'entidad',   label: 'Entidad',    desc: 'Fundacion o veterinaria',   Icon: Building2 },
-              ].map(r => (
-                <button key={r.value} type="button"
-                  style={{ ...s.rolBtn, ...(form.rol === r.value ? s.rolBtnActive : {}) }}
-                  onClick={() => setForm(f => ({ ...f, rol: r.value }))}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: form.rol === r.value ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.4rem' }}>
-                    <r.Icon size={16} color={form.rol === r.value ? '#2563eb' : '#94a3b8'} />
-                  </div>
-                  <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{r.label}</span>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', lineHeight: 1.3 }}>{r.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="mt-4 flex rounded-lg border border-border overflow-hidden">
+          {[
+            { value: 'ciudadano', label: 'Ciudadano',  icon: User },
+            { value: 'entidad',   label: 'Entidad',    icon: Building2 },
+          ].map(r => (
+            <button key={r.value} type="button" onClick={() => { setRol(r.value); setError('') }}
+              className={`flex flex-1 items-center justify-center gap-2 py-2.5 text-sm font-semibold transition ${
+                rol === r.value ? 'bg-navy text-white' : 'bg-card text-muted-foreground hover:bg-muted'
+              }`}>
+              <r.icon className="h-4 w-4" />
+              {r.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Campos de entidad */}
-          {esEntidad && (
-            <div style={s.entidadBox}>
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start', color: '#92400e', fontSize: '0.78rem', marginBottom: '0.5rem' }}>
-                <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-                <span>Las cuentas de entidad requieren verificacion de correo y aprobacion del administrador.</span>
+        <form onSubmit={submit} className="mt-4 space-y-3">
+          <Field icon={User} label="Nombre completo *" maxLength={100}
+            value={form.nombre} onChange={set('nombre')} placeholder="Tu nombre completo" />
+          <Field icon={Mail} label="Correo electrónico *" maxLength={150}
+            value={form.email} onChange={set('email')} type="email" placeholder="correo@ejemplo.com" />
+          <Field icon={Lock} label="Contraseña *" maxLength={100}
+            value={form.contrasena} onChange={set('contrasena')} type="password" placeholder="Mínimo 8 caracteres" />
+
+          {rol === 'entidad' && (
+            <div className="space-y-3 rounded-lg border border-teal/30 bg-teal/5 p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 className="h-4 w-4 text-teal" />
+                <p className="text-xs font-bold text-teal uppercase tracking-wide">Información de la entidad</p>
               </div>
-              <Field label="Tipo de entidad *" error={errors.tipo_entidad}>
-                <select name="tipo_entidad" value={form.tipo_entidad} onChange={handleChange}
-                  style={{ ...s.input, ...(errors.tipo_entidad ? s.inputErr : {}) }}>
-                  <option value="">Selecciona el tipo</option>
-                  {TIPOS_ENTIDAD.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </Field>
-              <Field label="Nombre de la organizacion *" error={errors.nombre_organizacion}>
-                <InputIcon Icon={Building2} error={errors.nombre_organizacion}>
-                  <input name="nombre_organizacion" value={form.nombre_organizacion} onChange={handleChange}
-                    placeholder="Ej: Fundacion Patitas Felices"
-                    style={{ ...s.input, ...s.inputWithIcon, ...(errors.nombre_organizacion ? s.inputErr : {}) }} />
-                </InputIcon>
-              </Field>
-              <Field label="NIT / Documento *" error={errors.nit}>
-                <InputIcon Icon={FileText} error={errors.nit}>
-                  <input name="nit" value={form.nit} onChange={handleChange}
-                    placeholder="Ej: 900123456-7"
-                    style={{ ...s.input, ...s.inputWithIcon, ...(errors.nit ? s.inputErr : {}) }} />
-                </InputIcon>
-              </Field>
-              <Field label="Telefono oficial *" error={errors.telefono_oficial}>
-                <InputIcon Icon={Phone} error={errors.telefono_oficial}>
-                  <input name="telefono_oficial" value={form.telefono_oficial} onChange={handleChange}
-                    placeholder="Ej: 3001234567"
-                    style={{ ...s.input, ...s.inputWithIcon, ...(errors.telefono_oficial ? s.inputErr : {}) }} />
-                </InputIcon>
-              </Field>
-              <Field label="Direccion de la sede (opcional)">
-                <InputIcon Icon={MapPin}>
-                  <input name="direccion_sede" value={form.direccion_sede} onChange={handleChange}
-                    placeholder="Calle 10 # 5-20"
-                    style={{ ...s.input, ...s.inputWithIcon }} />
-                </InputIcon>
-              </Field>
-              <Field label="Sitio web o red social (opcional)">
-                <InputIcon Icon={Link2}>
-                  <input name="enlace_verificacion" value={form.enlace_verificacion} onChange={handleChange}
-                    placeholder="https://..."
-                    style={{ ...s.input, ...s.inputWithIcon }} />
-                </InputIcon>
-              </Field>
+
+              <Field icon={Building2} label="Nombre de la organización *" maxLength={100}
+                value={form.nombre_organizacion} onChange={set('nombre_organizacion')}
+                placeholder="Nombre oficial" />
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-foreground">NIT *</span>
+                <div className="relative">
+                  <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input value={form.nit} onChange={handleNIT} {...digitInputGuards('nit', 10)} placeholder="Ej: 900123456" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10}
+                    className="w-full rounded-lg border border-input bg-card py-2 pl-10 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Ingresa el NIT de la entidad, sin puntos ni guiones. Puedes incluir el dígito de verificación.</p>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-foreground">Tipo de entidad *</span>
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <select value={form.tipo_entidad} onChange={set('tipo_entidad')}
+                    className="w-full appearance-none rounded-lg border border-input bg-card py-2 pl-10 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+                    <option value="">Selecciona el tipo</option>
+                    {TIPOS_ENTIDAD.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-foreground">Teléfono oficial *</span>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input value={form.telefono_oficial} onChange={handleTel} {...digitInputGuards('telefono_oficial', 10)} placeholder="Ej: 3226671461" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10}
+                    className="w-full rounded-lg border border-input bg-card py-2 pl-10 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Ingresa un número válido de 10 dígitos, sin espacios ni indicativos.</p>
+              </label>
+
+              <Field icon={MapPin} label="Ciudad *" maxLength={100}
+                value={form.ciudad} onChange={set('ciudad')} placeholder="Ciudad o municipio" />
+
+              <Field icon={UserCheck} label="Nombre del representante *" maxLength={100}
+                value={form.representante} onChange={set('representante')} placeholder="Nombre del responsable" />
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-foreground">
+                  Descripción de la entidad * ({form.descripcion_entidad.length}/800 máx.)
+                </span>
+                <textarea value={form.descripcion_entidad} onChange={set('descripcion_entidad')}
+                  rows={3} maxLength={800} placeholder="¿Qué hace tu entidad? ¿Cuál es su misión?"
+                  className="w-full rounded-lg border border-input bg-card py-2 px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 resize-none" />
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Mínimo 20 caracteres.</p>
+              </label>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold text-foreground">Servicios ofrecidos * (selecciona al menos uno)</p>
+                <div className="space-y-1.5">
+                  {SERVICIOS.map(s => (
+                    <label key={s.value} className="flex items-center gap-2.5 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/50 transition">
+                      <input type="checkbox"
+                        checked={form.servicios_ofrecidos.includes(s.value)}
+                        onChange={() => toggleServicio(s.value)}
+                        className="h-4 w-4 rounded accent-teal" />
+                      <span className="text-sm text-foreground">{s.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <Field icon={MapPin} label="Dirección de sede (opcional)" maxLength={200}
+                value={form.direccion_sede} onChange={set('direccion_sede')}
+                placeholder="Dirección física" />
+              <Field icon={Globe} label="Sitio web (opcional)" maxLength={255}
+                value={form.enlace_verificacion} onChange={set('enlace_verificacion')}
+                placeholder="https://..." />
+
+              {entityError && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {entityError}
+                </div>
+              )}
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                La información será revisada por un administrador antes de habilitar tu entidad.
+              </div>
             </div>
           )}
 
-          <Field label="Nombre completo *" error={errors.nombre}>
-            <InputIcon Icon={User} error={errors.nombre}>
-              <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Tu nombre completo"
-                style={{ ...s.input, ...s.inputWithIcon, ...(errors.nombre ? s.inputErr : {}) }} />
-            </InputIcon>
-          </Field>
-
-          <Field label="Correo electronico *" error={errors.email}>
-            <InputIcon Icon={Mail} error={errors.email}>
-              <input name="email" value={form.email} onChange={handleChange} placeholder="correo@ejemplo.com" type="email"
-                style={{ ...s.input, ...s.inputWithIcon, ...(errors.email ? s.inputErr : {}) }} />
-            </InputIcon>
-          </Field>
-
-          <Field label="Contrasena *" error={errors.contrasena}>
-            <div style={{ position: 'relative' }}>
-              <InputIcon Icon={Lock} error={errors.contrasena}>
-                <input name="contrasena" value={form.contrasena} onChange={handleChange}
-                  type={showPw ? 'text' : 'password'} placeholder="Minimo 8 caracteres"
-                  style={{ ...s.input, ...s.inputWithIcon, paddingRight: '2.5rem', ...(errors.contrasena ? s.inputErr : {}) }} />
-              </InputIcon>
-              <button type="button" onClick={() => setShowPw(v => !v)} style={s.eyeBtn}>
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-            {strength && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
-                <div style={{ flex: 1, height: '4px', background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: strength.w, background: strength.color, borderRadius: '99px', transition: 'all 0.3s' }} />
-                </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: '600', color: strength.color }}>{strength.label}</span>
-              </div>
-            )}
-          </Field>
-
-          <Field label="Confirmar contrasena *" error={errors.confirmar}>
-            <div style={{ position: 'relative' }}>
-              <InputIcon Icon={Lock} error={errors.confirmar}>
-                <input name="confirmar" value={form.confirmar} onChange={handleChange}
-                  type={showPw2 ? 'text' : 'password'} placeholder="Repite tu contrasena"
-                  style={{ ...s.input, ...s.inputWithIcon, paddingRight: '2.5rem', ...(errors.confirmar ? s.inputErr : {}) }} />
-              </InputIcon>
-              <button type="button" onClick={() => setShowPw2(v => !v)} style={s.eyeBtn}>
-                {showPw2 ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-            {form.confirmar && form.contrasena === form.confirmar && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <CheckCircle2 size={12} /> Las contrasenas coinciden
-              </span>
-            )}
-          </Field>
-
-          <button type="submit" disabled={loading} style={{ ...s.btnPrimario, opacity: loading ? 0.7 : 1, marginTop: '0.25rem' }}>
-            {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+          <button type="submit" disabled={loading || (rol === 'entidad' && Boolean(entityError))}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70">
+            {loading ? 'Creando cuenta...' : <><span>Crear cuenta</span><ArrowRight className="h-4 w-4" /></>}
           </button>
-        </form>
 
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: '#64748b' }}>
-          Ya tienes cuenta?{' '}
-          <Link to="/login" style={{ color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}>Inicia sesion</Link>
-        </p>
+          <p className="text-center text-sm text-muted-foreground">
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="font-semibold text-navy hover:underline">Inicia sesión</Link>
+          </p>
+        </form>
       </div>
     </div>
-  );
+  )
 }
 
-function Field({ label, error, children }) {
+function Field({ icon: Icon, label, type = 'text', value, onChange, placeholder, maxLength }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-      {label && <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>{label}</label>}
-      {children}
-      {error && <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>{error}</span>}
-    </div>
-  );
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-foreground">{label}</span>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input type={type} value={value} onChange={onChange} placeholder={placeholder} maxLength={maxLength}
+          className="w-full rounded-lg border border-input bg-card py-2 pl-10 pr-3 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+      </div>
+    </label>
+  )
 }
-
-function InputIcon({ Icon, error, children }) {
-  return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-      <Icon size={15} style={{ position: 'absolute', left: '0.75rem', color: error ? '#ef4444' : '#94a3b8', pointerEvents: 'none' }} />
-      {children}
-    </div>
-  );
-}
-
-const s = {
-  page: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: 'system-ui, sans-serif' },
-  card: { background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '500px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' },
-  btnGoogle: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', width: '100%', padding: '0.7rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: '600', fontSize: '0.875rem', color: '#374151', cursor: 'pointer' },
-  label: { fontSize: '0.8rem', fontWeight: '600', color: '#374151' },
-  input: { width: '100%', padding: '0.65rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: 'white' },
-  inputWithIcon: { paddingLeft: '2.25rem' },
-  inputErr: { borderColor: '#ef4444', background: '#fef2f2' },
-  eyeBtn: { position: 'absolute', right: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' },
-  rolGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.25rem' },
-  rolBtn: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.875rem', border: '2px solid #e2e8f0', borderRadius: '12px', background: 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', color: '#374151' },
-  rolBtnActive: { borderColor: '#2563eb', background: '#eff6ff' },
-  entidadBox: { background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-  btnPrimario: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0.75rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' },
-};

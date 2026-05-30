@@ -1,85 +1,75 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { PawPrint } from 'lucide-react'
 
-const API = 'http://localhost:3000/api/auth';
-
-// Maneja tanto /auth/callback (Google OAuth) como /auth/verificar/:token (Magic Link)
 export default function AuthCallback() {
-  const [params]    = useSearchParams();
-  const { token: magicToken } = useParams();
-  const navigate    = useNavigate();
-  const { login }   = useAuth();
-  const [error, setError] = useState('');
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const { login } = useAuth()
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (magicToken) {
-      // Magic Link — el backend redirige aquí con JWT en query params
-      // Este componente no hace nada, el backend redirige directamente a /auth/callback
-      return;
-    }
-
-    // Google OAuth callback — llega con ?token=xxx&user=xxx
-    const token   = params.get('token');
-    const userStr = params.get('user');
-    const errorParam = params.get('error');
-    const mensaje = params.get('mensaje');
+    const token        = params.get('token')
+    const userStr      = params.get('user')
+    const errorParam   = params.get('error')
+    const mensaje      = params.get('mensaje')
+    const pendiente    = params.get('pendienteAprobacion') === '1'
 
     if (errorParam === 'link_invalido') {
-      navigate('/login?error=link_invalido', { replace: true });
-      return;
+      navigate('/login?error=link_invalido', { replace: true })
+      return
     }
-
     if (errorParam === 'link_expirado') {
-      navigate('/login?error=link_expirado', { replace: true });
-      return;
+      navigate('/login?error=link_expirado', { replace: true })
+      return
     }
-
     if (mensaje === 'verificado_pendiente') {
       navigate('/login', {
         replace: true,
-        state: { mensaje: 'Correo verificado. Tu cuenta sera revisada por un administrador.' }
-      });
-      return;
+        state: { mensaje: 'Correo verificado. Tu cuenta será revisada por un administrador.' }
+      })
+      return
     }
 
     if (token && userStr) {
       try {
-        const user = JSON.parse(decodeURIComponent(userStr));
-        login(token, user);
-        navigate(user.rol === 'administrador' ? '/admin' : '/dashboard', { replace: true });
-      } catch {
-        navigate('/login?error=google', { replace: true });
+        const user = JSON.parse(decodeURIComponent(userStr))
+        login(token, user, { pendienteAprobacion: pendiente })
+
+        if (pendiente) {
+          navigate('/pendiente-aprobacion', { replace: true })
+        } else if (user.rol === 'administrador') {
+          navigate('/admin', { replace: true })
+        } else if (user.rol === 'entidad') {
+          navigate('/reportes', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
+      } catch (err) {
+        setError('Error al procesar la sesión.')
+        setTimeout(() => navigate('/login?error=google', { replace: true }), 1500)
       }
     } else {
-      navigate('/login', { replace: true });
+      navigate('/login', { replace: true })
     }
-  }, []);
-
-  if (error) return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>{error}</p>
-      </div>
-    </div>
-  );
+  }, [])
 
   return (
-    <div style={s.page}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={s.spinner} />
-        <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '1rem' }}>
-          Verificando tu cuenta...
-        </p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-navy text-white">
+          <PawPrint className="h-6 w-6" />
+        </div>
+        {error ? (
+          <p className="text-sm font-semibold text-destructive">{error}</p>
+        ) : (
+          <>
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-3 border-muted border-t-teal" />
+            <p className="text-sm font-medium text-muted-foreground">Verificando tu cuenta...</p>
+          </>
+        )}
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
-  );
+  )
 }
-
-const s = {
-  page: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' },
-  card: { background: 'white', borderRadius: '16px', padding: '2rem', border: '1px solid #e2e8f0', textAlign: 'center' },
-  spinner: { width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' },
-};

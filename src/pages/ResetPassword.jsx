@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import axios from 'axios'
+import { API_AUTH_URL } from '@/config/api';
 
-const API = 'http://localhost:3000/api/auth';
+const API = API_AUTH_URL
 
 export default function ResetPassword() {
   const [params]          = useSearchParams();
@@ -48,7 +49,7 @@ export default function ResetPassword() {
     if (form.contrasena !== form.confirmar) { setError('Las contraseñas no coinciden'); return; }
     try {
       setLoading(true);
-      await axios.post(`${API}/reset-password`, { token, contrasena: form.contrasena });
+      await axios.post(`${API}/reset-password`, { resetToken: token, contrasena: form.contrasena });
       setExito(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al actualizar. El enlace puede haber expirado.');
