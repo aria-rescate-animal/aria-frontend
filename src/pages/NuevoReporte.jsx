@@ -1,179 +1,473 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, X, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
-import { crearReporte } from '../services/reportes.service';
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { crearReporte } from '@/services/reportes.service'
+import { obtenerEntidadesDisponibles } from '@/services/auth.service'
+import { CATEGORIA_LABELS, CATEGORIA_HELP, SERVICIOS_LABELS, PRIORIDAD_LABELS } from '@/lib/estados'
+import {
+  Camera, MapPin, FileText, Tag, CheckCircle2,
+  AlertCircle, Bot, ChevronDown, Building2, AlertTriangle, LocateFixed, ClipboardCheck,
+  RotateCcw
+} from 'lucide-react'
 
-const ESPECIES = ['Perro', 'Gato', 'Ave', 'Reptil', 'Otro'];
+const ESPECIES = ['Perro', 'Gato', 'Ave', 'Caballo', 'Vaca', 'Reptil', 'Conejo', 'Otro']
+
+const CATEGORIAS = [
+  'abandono',
+  'herido',
+  'enfermo',
+  'maltrato',
+  'cautiverio',
+  'fauna_silvestre',
+  'no_estoy_seguro',
+]
+
+const MAX_SIZE_MB = 5
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+const categoriaRequiereRevision = (categoria) => categoria === 'no_estoy_seguro'
+
+const limpiarTexto = (value) => String(value || '').trim().replace(/\s+/g, ' ')
 
 export default function NuevoReporte() {
-  const navigate = useNavigate();
-  const [form, setForm]         = useState({ especie: '', descripcion: '', ubicacion: '' });
-  const [fotoFile, setFotoFile] = useState(null);
-  const [fotoPreview, setFotoPreview] = useState(null);
-  const [errors, setErrors]     = useState({});
-  const [loading, setLoading]   = useState(false);
-  const [enviado, setEnviado]   = useState(false);
-  const [errorEnvio, setErrorEnvio] = useState('');
-  const fileInputRef = useRef(null);
+  const navigate = useNavigate()
+  const [species, setSpecies]         = useState('')
+  const [desc, setDesc]               = useState('')
+  const [sector, setSector]           = useState('')
+  const [referencia, setReferencia]   = useState('')
+  const [coords, setCoords]           = useState(null)
+  const [locating, setLocating]       = useState(false)
+  const [usandoManual, setUsandoManual] = useState(false) // true cuando hay GPS pero el usuario quiso volver al manual
+  const [category, setCategory]       = useState('')
+  const [prioridad, setPrioridad]     = useState('normal')
+  const [photo, setPhoto]             = useState(null)
+  const [fotoFile, setFotoFile]       = useState(null)
+  const [fotoError, setFotoError]     = useState('')
+  const [submitted, setSubmitted]     = useState(false)
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState('')
 
-  const validar = () => {
-    const e = {};
-    if (!form.especie)              e.especie     = 'Selecciona una especie';
-    if (!form.descripcion.trim())   e.descripcion = 'La descripcion es obligatoria';
-    else if (form.descripcion.trim().length < 10) e.descripcion = 'Minimo 10 caracteres';
-    if (!form.ubicacion.trim())     e.ubicacion   = 'La ubicacion es obligatoria';
-    return e;
-  };
+  const [entidades, setEntidades]         = useState({ todas: [], sugeridas: [] })
+  const [entidadId, setEntidadId]         = useState('')
+  const [loadingEntidades, setLoadingEnt] = useState(false)
 
-  const handleChange = (e) => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-    if (errors[e.target.name]) setErrors(er => ({ ...er, [e.target.name]: '' }));
-  };
+  const selectedCategory = category ? { value: category, label: CATEGORIA_LABELS[category], help: CATEGORIA_HELP[category] } : null
+  const descError = desc.length > 0 && desc.trim().length < 20
+  const referenciaError = referencia.length > 0 && referencia.trim().length < 8
 
-  const handleFoto = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFotoFile(file);
-    setFotoPreview(URL.createObjectURL(file));
-  };
+  // ── Lógica GPS ──
+  // - Si hay coords y NO está usando manual: sector se oculta y no es obligatorio
+  // - Si hay coords pero el usuario activó manual: sector se muestra y es obligatorio
+  // - Si NO hay coords: sector se muestra y es obligatorio
+  const tieneGPS = Boolean(coords)
+  const mostrarCampoSector = !tieneGPS || usandoManual
+  const sectorObligatorio = mostrarCampoSector
 
-  const handleQuitarFoto = () => {
-    setFotoFile(null);
-    setFotoPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const ubicacionFinal = useMemo(() => {
+    const zona = limpiarTexto(sector)
+    const ref = limpiarTexto(referencia)
+    if (tieneGPS && !usandoManual) {
+      // Solo GPS + referencia
+      return ref ? `Ubicación GPS capturada — Ref: ${ref}` : 'Ubicación GPS capturada'
+    }
+    if (!zona && !ref) return ''
+    if (zona && ref) return `${zona} — Ref: ${ref}`
+    return zona || `Ref: ${ref}`
+  }, [sector, referencia, tieneGPS, usandoManual])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const errs = validar();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+  useEffect(() => {
+    setEntidadId('')
+    setEntidades({ todas: [], sugeridas: [] })
+    if (!category || categoriaRequiereRevision(category)) return
+
+    setLoadingEnt(true)
+    obtenerEntidadesDisponibles(category)
+      .then(data => setEntidades({ todas: data?.todas || [], sugeridas: data?.sugeridas || [] }))
+      .catch(() => setEntidades({ todas: [], sugeridas: [] }))
+      .finally(() => setLoadingEnt(false))
+  }, [category])
+
+  const onPhoto = (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFotoError('')
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      setFotoError('Solo se permiten imágenes JPG, PNG o WebP.')
+      return
+    }
+    if (f.size > MAX_SIZE_MB * 1024 * 1024) {
+      setFotoError(`La imagen no debe superar ${MAX_SIZE_MB}MB.`)
+      return
+    }
+    setFotoFile(f)
+    setPhoto(URL.createObjectURL(f))
+  }
+
+  const usarUbicacionActual = () => {
+    setError('')
+    if (!navigator.geolocation) {
+      setError('Tu navegador no permite capturar GPS. Escribe la ubicación o sector y un punto de referencia claro.')
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6))
+        const lng = Number(pos.coords.longitude.toFixed(6))
+        setCoords({ latitud: lat, longitud: lng })
+        setUsandoManual(false)
+        setSector('') // limpiamos el campo manual
+        setLocating(false)
+      },
+      () => {
+        setLocating(false)
+        setError('No pudimos acceder al GPS. Escribe una ubicación o sector y un punto de referencia para que la entidad encuentre al animal.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
+  }
+
+  const volverAManual = () => {
+    setCoords(null)
+    setUsandoManual(false)
+  }
+
+  const listaEntidades = entidades.sugeridas || []
+  const tieneEntidadesCompatibles = listaEntidades.length > 0
+  const esRevisionAdministrativa = category && (categoriaRequiereRevision(category) || !tieneEntidadesCompatibles)
+  const requiereSeleccionEntidad = Boolean(category && !categoriaRequiereRevision(category) && tieneEntidadesCompatibles)
+
+  // Validación de ubicación:
+  // - Si hay GPS sin manual: solo referencia es obligatoria
+  // - Si NO hay GPS o usa manual: sector + referencia son obligatorios
+  const ubicacionValida = sectorObligatorio
+    ? sector.trim().length >= 3 && referencia.trim().length >= 8
+    : referencia.trim().length >= 8
+
+  const puedeEnviar = fotoFile && species && category && ubicacionValida && desc.trim().length >= 20 && !fotoError && (!requiereSeleccionEntidad || entidadId)
+  const entidadSeleccionada = listaEntidades.find(e => String(e.id) === String(entidadId))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!fotoFile) return setFotoError('Debes subir una foto del animal para crear el reporte.')
+
+    if (sectorObligatorio) {
+      if (!sector.trim()) return setError('La ubicación o sector es obligatorio.')
+      if (sector.trim().length < 3) return setError('La ubicación o sector debe ser más clara.')
+    }
+    if (!referencia.trim() || referencia.trim().length < 8) return setError('Agrega un punto de referencia claro para que la entidad encuentre al animal.')
+    if (requiereSeleccionEntidad && !entidadId) return setError('Selecciona una entidad compatible para enviar el reporte.')
+    if (!puedeEnviar) return setError('Completa todos los campos obligatorios antes de enviar.')
+
+    setError('')
+    setLoading(true)
     try {
-      setLoading(true);
-      setErrorEnvio('');
-      await crearReporte({ ...form, fotoFile });
-      setEnviado(true);
+      await crearReporte({
+        especie: species,
+        descripcion: desc.trim(),
+        ubicacion: ubicacionFinal,
+        latitud: coords?.latitud ?? null,
+        longitud: coords?.longitud ?? null,
+        categoria: category,
+        prioridad,
+        entidad_asignada_id: esRevisionAdministrativa ? null : entidadId,
+        fotoFile,
+      })
+      setSubmitted(true)
+      setTimeout(() => navigate('/dashboard'), 2000)
     } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        setErrorEnvio('No tienes permiso para crear reportes o tu sesion expiro.');
-      } else if (err.code === 'ERR_NETWORK') {
-        setErrorEnvio('No se pudo conectar con el servidor.');
-      } else {
-        setErrorEnvio(err.response?.data?.message || 'Error al enviar el reporte.');
-      }
-    } finally { setLoading(false); }
-  };
+      if (err.response?.status === 400) setError(err.response.data?.message || 'La imagen o los datos del reporte no son válidos.')
+      else if (err.response?.status === 503) setError('El servicio de verificación IA no está disponible. Intenta más tarde.')
+      else if (err.response?.status === 403) setError('No tienes permiso para crear reportes.')
+      else setError('Error al enviar el reporte. Verifica tu conexión y vuelve a intentarlo.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  if (enviado) return (
-    <div style={{ maxWidth: '560px', margin: '4rem auto', padding: '0 1.5rem', textAlign: 'center' }}>
-      <div style={{ background: 'white', borderRadius: '20px', padding: '2.5rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-        <div style={{ width: '64px', height: '64px', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-          <CheckCircle2 size={32} color="#16a34a" />
-        </div>
-        <h2 style={{ margin: '0 0 0.5rem', color: '#0f172a', fontWeight: '700' }}>Reporte enviado</h2>
-        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Tu reporte fue registrado. Las entidades seran notificadas de inmediato.</p>
-        <button onClick={() => navigate('/reportes')} style={s.btnPrimario}>Ver feed de casos</button>
-      </div>
+  if (submitted) return (
+    <div className="mx-auto max-w-md rounded-lg border border-emerald-200 bg-emerald-50 p-10 text-center">
+      <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+      <h2 className="mt-3 text-xl font-bold text-foreground">¡Reporte enviado!</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {entidadSeleccionada?.nombre_organizacion
+          ? `Enviado a ${entidadSeleccionada.nombre_organizacion}.`
+          : 'Un administrador revisará el caso y lo asignará a una entidad adecuada.'}
+      </p>
     </div>
-  );
+  )
 
   return (
-    <div style={{ maxWidth: '580px', margin: '0 auto', padding: '2rem 1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="mx-auto max-w-3xl">
+      <header className="mb-5">
+        <h1 className="text-xl font-bold text-foreground">Nuevo reporte</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Guía a la entidad con foto, ubicación, referencia y una descripción clara.</p>
+      </header>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem 0.75rem', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem' }}>
-          <ArrowLeft size={14} /> Atrás
-        </button>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>Nuevo reporte</h1>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>Reporta un animal en situacion de calle</p>
-        </div>
+      <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-teal/20 bg-teal/5 px-3 py-2.5">
+        <Bot className="h-4 w-4 text-teal flex-shrink-0" />
+        <p className="text-xs text-foreground/80">
+          La foto será verificada por IA antes de guardar el reporte. Si la imagen no corresponde a un animal real, no se enviará.
+        </p>
       </div>
 
-      <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+        </div>
+      )}
 
-        {errorEnvio && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#dc2626', fontSize: '0.8rem' }}>
-            {errorEnvio}
+      <form onSubmit={submit} className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
+        <SectionTitle number="1" title="Información del animal" />
+
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-foreground">
+            Foto del animal *
+            <span className="ml-1 text-muted-foreground font-normal">(JPG, PNG, WebP — máx {MAX_SIZE_MB}MB)</span>
+          </label>
+          <label className={`flex aspect-[16/9] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition ${
+            fotoError ? 'border-destructive bg-destructive/5' : 'border-border bg-muted/40 hover:border-ring hover:bg-muted'
+          }`}>
+            {photo
+              ? <img src={photo} alt="preview" className="h-full w-full object-cover" />
+              : <div className="text-center p-4">
+                  <Camera className={`mx-auto h-7 w-7 ${fotoError ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <span className="mt-1.5 block text-sm font-medium text-muted-foreground">Toca para subir foto</span>
+                  <span className="text-xs text-muted-foreground">Obligatoria</span>
+                </div>}
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} className="hidden" />
+          </label>
+          {fotoError && <p className="mt-1 flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3" /> {fotoError}</p>}
+        </div>
+
+        <FormField label="Especie *">
+          <SelectInput icon={Tag} value={species} onChange={e => setSpecies(e.target.value)}>
+            <option value="">Selecciona la especie</option>
+            {ESPECIES.map(e => <option key={e} value={e}>{e}</option>)}
+          </SelectInput>
+        </FormField>
+
+        <FormField label={`Descripción * — ${desc.length} caracteres`} error={descError ? 'Mínimo 20 caracteres' : undefined}>
+          <div className="relative">
+            <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
+              placeholder="Describe lo que observas: comportamiento, heridas, síntomas o situación del animal."
+              className={`w-full rounded-lg border bg-card py-2 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/30 ${descError ? 'border-destructive' : 'border-input focus:border-ring'}`} />
+          </div>
+        </FormField>
+
+        <SectionTitle number="2" title="Ubicación para encontrarlo" />
+
+        {/* ── Botón GPS ── */}
+        <div className="rounded-lg border border-border bg-muted/20 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={usarUbicacionActual} disabled={locating}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
+                  tieneGPS && !usandoManual
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    : 'border-teal/30 bg-teal/10 text-teal hover:bg-teal/15'
+                }`}>
+                <LocateFixed className="h-3.5 w-3.5" />
+                {locating ? 'Capturando GPS...' : tieneGPS && !usandoManual ? 'GPS capturado — actualizar' : 'Usar mi ubicación actual'}
+              </button>
+              {tieneGPS && !usandoManual && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> GPS agregado correctamente
+                </span>
+              )}
+            </div>
+            {tieneGPS && !usandoManual && (
+              <button type="button" onClick={() => setUsandoManual(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted transition">
+                <RotateCcw className="h-3 w-3" /> Usar ubicación manual
+              </button>
+            )}
+            {tieneGPS && usandoManual && (
+              <button type="button" onClick={volverAManual}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted transition">
+                Quitar GPS
+              </button>
+            )}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {tieneGPS && !usandoManual
+              ? 'Tu ubicación GPS reemplaza el sector escrito. Solo necesitas agregar un punto de referencia.'
+              : 'Si usas GPS solo necesitarás el punto de referencia. Sin GPS, la ubicación o sector es obligatoria.'}
+          </p>
+        </div>
+
+        {mostrarCampoSector && (
+          <FormField label="Ubicación o sector *">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={sector} onChange={e => setSector(e.target.value)} maxLength={120}
+                placeholder="Ej: Barrio Centro, vereda La Esperanza, parque principal"
+                className="w-full rounded-lg border border-input bg-card py-2 pl-10 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+            </div>
+          </FormField>
+        )}
+
+        <FormField label="Punto de referencia *" error={referenciaError ? 'Agrega una referencia más clara.' : undefined}>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input value={referencia} onChange={e => setReferencia(e.target.value)} maxLength={160}
+              placeholder="Ej: Frente al colegio San José, junto a la tienda azul"
+              className={`w-full rounded-lg border bg-card py-2 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/30 ${referenciaError ? 'border-destructive' : 'border-input focus:border-ring'}`} />
+          </div>
+        </FormField>
+
+        <SectionTitle number="3" title="Situación del animal" />
+
+        <FormField label="¿Qué está pasando? *">
+          <SelectInput icon={Tag} value={category} onChange={e => setCategory(e.target.value)}>
+            <option value="">Selecciona el tipo de caso</option>
+            {CATEGORIAS.map(value => <option key={value} value={value}>{CATEGORIA_LABELS[value]}</option>)}
+          </SelectInput>
+          {selectedCategory?.help && (
+            <div className="mt-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {selectedCategory.help}
+            </div>
+          )}
+        </FormField>
+
+        <FormField label="Prioridad">
+          <SelectInput icon={AlertTriangle} value={prioridad} onChange={e => setPrioridad(e.target.value)}>
+            <option value="normal">Normal — necesita atención, pero no parece crítico</option>
+            <option value="urgente">Urgente — peligro inmediato o condición crítica</option>
+          </SelectInput>
+        </FormField>
+
+        {category && (
+          <div className="rounded-lg border border-border bg-muted/20 p-4">
+            <div className="mb-3 flex items-start gap-2">
+              <Building2 className="mt-0.5 h-4 w-4 text-navy" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Entidad destinataria</h3>
+                <p className="mt-1 text-xs text-muted-foreground">ARIA solo muestra entidades aprobadas y compatibles con el tipo de caso.</p>
+              </div>
+            </div>
+
+            {category === 'fauna_silvestre' && (
+              <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <span>Este caso requiere entidades que atienden fauna silvestre. Si no hay disponibles, pasará a revisión administrativa.</span>
+              </div>
+            )}
+
+            {category === 'no_estoy_seguro' ? (
+              <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">El caso será revisado por un administrador.</p>
+                <p className="mt-1 text-xs">Como no estás seguro del tipo de caso, un administrador lo clasificará y lo asignará a una entidad adecuada.</p>
+              </div>
+            ) : loadingEntidades ? (
+              <p className="text-sm text-muted-foreground">Buscando entidades compatibles...</p>
+            ) : tieneEntidadesCompatibles ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entidades compatibles</p>
+                {listaEntidades.map(ent => {
+                  const selected = String(entidadId) === String(ent.id)
+                  return (
+                    <label key={ent.id} className={`block cursor-pointer rounded-lg border p-3 transition ${selected ? 'border-navy bg-navy/5' : 'border-border bg-card hover:border-teal/40'}`}>
+                      <div className="flex items-start gap-2">
+                        <input type="radio" name="entidad" value={ent.id} checked={selected} onChange={() => setEntidadId(String(ent.id))} className="mt-1 accent-navy" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">{ent.nombre_organizacion || ent.nombre}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{(ent.tipo_entidad || '').replace(/_/g, ' ')}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{(ent.servicios || []).map(s => SERVICIOS_LABELS[s] || s).join(' · ')}</p>
+                          {ent.ciudad && <p className="mt-1 text-xs text-muted-foreground">{ent.ciudad}</p>}
+                        </div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">No hay entidades compatibles disponibles para este tipo de caso.</p>
+                <p className="mt-1 text-xs">Puedes enviar el reporte a revisión para que un administrador lo asigne manualmente.</p>
+              </div>
+            )}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        <ResumenReporte
+          species={species}
+          category={category}
+          prioridad={prioridad}
+          sector={tieneGPS && !usandoManual ? 'GPS capturado' : sector}
+          referencia={referencia}
+          coords={coords}
+          usandoManual={usandoManual}
+          entidad={entidadSeleccionada}
+          revision={Boolean(esRevisionAdministrativa)}
+        />
 
-          {/* Especie */}
-          <div>
-            <label style={s.label}>Especie *</label>
-            <select name="especie" value={form.especie} onChange={handleChange}
-              style={{ ...s.input, ...(errors.especie ? s.inputErr : {}), marginTop: '0.3rem' }}>
-              <option value="">Selecciona una especie</option>
-              {ESPECIES.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-            {errors.especie && <p style={s.errMsg}>{errors.especie}</p>}
-          </div>
-
-          {/* Descripcion */}
-          <div>
-            <label style={s.label}>Descripcion *</label>
-            <textarea name="descripcion" value={form.descripcion} onChange={handleChange}
-              placeholder="Describe la situacion del animal (minimo 10 caracteres)"
-              rows={4}
-              style={{ ...s.input, ...(errors.descripcion ? s.inputErr : {}), marginTop: '0.3rem', resize: 'vertical', fontFamily: 'inherit' }}
-            />
-            {errors.descripcion && <p style={s.errMsg}>{errors.descripcion}</p>}
-          </div>
-
-          {/* Ubicacion */}
-          <div>
-            <label style={s.label}>Ubicacion *</label>
-            <input name="ubicacion" value={form.ubicacion} onChange={handleChange}
-              placeholder="Ej: Parque Central, Mocoa"
-              style={{ ...s.input, ...(errors.ubicacion ? s.inputErr : {}), marginTop: '0.3rem' }}
-            />
-            {errors.ubicacion && <p style={s.errMsg}>{errors.ubicacion}</p>}
-          </div>
-
-          {/* Foto */}
-          <div>
-            <label style={s.label}>Foto del animal (opcional)</label>
-            {!fotoPreview ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{ marginTop: '0.3rem', border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '2rem', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'all 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-              >
-                <div style={{ width: '40px', height: '40px', background: '#eff6ff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
-                  <Camera size={20} color="#2563eb" />
-                </div>
-                <p style={{ margin: 0, color: '#2563eb', fontWeight: '600', fontSize: '0.875rem' }}>Subir foto</p>
-                <p style={{ margin: '0.25rem 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>Desde galeria o camara · Max 5MB</p>
-              </div>
-            ) : (
-              <div style={{ marginTop: '0.3rem', position: 'relative' }}>
-                <img src={fotoPreview} alt="preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '12px', display: 'block' }} />
-                <button type="button" onClick={handleQuitarFoto} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
-                  <X size={14} />
-                </button>
-                <p style={{ margin: '0.4rem 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>{fotoFile?.name}</p>
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFoto} style={{ display: 'none' }} />
-          </div>
-
-          <button type="submit" disabled={loading} style={{ ...s.btnPrimario, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <Send size={15} />
-            {loading ? 'Enviando...' : 'Enviar reporte'}
+        <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
+          <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-muted transition">Cancelar</button>
+          <button type="submit" disabled={loading || !puedeEnviar}
+            className="rounded-lg bg-navy px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+            {loading ? 'Enviando...' : esRevisionAdministrativa ? 'Enviar a revisión administrativa' : 'Enviar reporte a la entidad'}
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
-  );
+  )
 }
 
-const s = {
-  label: { fontSize: '0.8rem', fontWeight: '600', color: '#374151', display: 'block' },
-  input: { width: '100%', padding: '0.65rem 0.75rem', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: 'white' },
-  inputErr: { borderColor: '#ef4444', background: '#fef2f2' },
-  errMsg: { color: '#dc2626', fontSize: '0.75rem', margin: '0.25rem 0 0' },
-  btnPrimario: { width: '100%', padding: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '0.875rem', transition: 'background 0.15s' },
-};
+function SectionTitle({ number, title }) {
+  return (
+    <div className="flex items-center gap-2 border-t border-border pt-4 first:border-t-0 first:pt-0">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-xs font-bold text-white">{number}</span>
+      <h2 className="text-sm font-bold text-foreground">{title}</h2>
+    </div>
+  )
+}
+
+function ResumenReporte({ species, category, prioridad, sector, referencia, coords, usandoManual, entidad, revision }) {
+  if (!species && !category && !sector && !referencia && !entidad) return null
+  const usaGPS = coords && !usandoManual
+  return (
+    <div className="rounded-lg border border-teal/20 bg-teal/5 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <ClipboardCheck className="h-4 w-4 text-teal" />
+        <h3 className="text-sm font-bold text-foreground">Resumen antes de enviar</h3>
+      </div>
+      <dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+        <Item label="Animal" value={species || 'Pendiente'} />
+        <Item label="Caso" value={category ? CATEGORIA_LABELS[category] : 'Pendiente'} />
+        <Item label="Prioridad" value={PRIORIDAD_LABELS[prioridad] || prioridad} />
+        <Item label="Ubicación" value={usaGPS ? 'GPS capturado' : (sector || 'Pendiente')} />
+        <Item label="Referencia" value={referencia || 'Pendiente'} />
+        <Item label="GPS" value={coords ? (usandoManual ? 'Capturado pero usando manual' : 'Activo') : 'No agregado'} />
+        <Item label="Destino" value={revision ? 'Revisión administrativa' : (entidad?.nombre_organizacion || 'Pendiente')} />
+      </dl>
+    </div>
+  )
+}
+
+function Item({ label, value }) {
+  return <div><dt className="font-semibold text-foreground">{label}</dt><dd className="break-words">{value}</dd></div>
+}
+
+function FormField({ label, error, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-foreground">{label}</span>
+      {children}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </label>
+  )
+}
+
+function SelectInput({ icon: Icon, children, ...props }) {
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <select {...props}
+        className="w-full appearance-none rounded-lg border border-input bg-card py-2 pl-10 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30">
+        {children}
+      </select>
+    </div>
+  )
+}

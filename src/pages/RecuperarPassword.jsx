@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import axios from 'axios'
+import { API_AUTH_URL } from '@/config/api';
 
-const API = 'http://localhost:3000/api/auth';
+const API = API_AUTH_URL
 
 export default function RecuperarPassword() {
   const navigate = useNavigate();
-  const [paso, setPaso]           = useState(1); // 1=email, 2=otp, 3=nueva contraseña
+  const [paso, setPaso]           = useState(1);
   const [email, setEmail]         = useState('');
   const [codigo, setCodigo]       = useState(['', '', '', '', '', '']);
   const [resetToken, setResetToken] = useState('');
@@ -18,7 +19,6 @@ export default function RecuperarPassword() {
   const [showPw2, setShowPw2]     = useState(false);
   const inputsRef = useRef([]);
 
-  // ── PASO 1: enviar email ──────────────────────────────────────────────────
   const handleEnviarEmail = async (e) => {
     e.preventDefault();
     if (!email.trim()) { setError('Ingresa tu correo'); return; }
@@ -31,7 +31,6 @@ export default function RecuperarPassword() {
     finally { setLoading(false); }
   };
 
-  // ── PASO 2: validar OTP ───────────────────────────────────────────────────
   const handleInputOTP = (i, val) => {
     if (!/^\d*$/.test(val)) return;
     const nuevo = [...codigo];
@@ -61,7 +60,6 @@ export default function RecuperarPassword() {
     } finally { setLoading(false); }
   };
 
-  // ── PASO 3: nueva contraseña ──────────────────────────────────────────────
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (passwords.nueva.length < 8) { setError('Minimo 8 caracteres'); return; }
@@ -76,7 +74,6 @@ export default function RecuperarPassword() {
     } finally { setLoading(false); }
   };
 
-  // ── Indicador de pasos ────────────────────────────────────────────────────
   const Stepper = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.75rem', justifyContent: 'center' }}>
       {[1, 2, 3].map((p, i) => (
@@ -98,8 +95,6 @@ export default function RecuperarPassword() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-
-        {/* Éxito */}
         {paso === 4 ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ width: '56px', height: '56px', background: '#f0fdf4', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
@@ -127,7 +122,6 @@ export default function RecuperarPassword() {
               </div>
             )}
 
-            {/* ── PASO 1: Email ── */}
             {paso === 1 && (
               <form onSubmit={handleEnviarEmail} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
@@ -147,7 +141,6 @@ export default function RecuperarPassword() {
               </form>
             )}
 
-            {/* ── PASO 2: OTP ── */}
             {paso === 2 && (
               <div>
                 <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', margin: '0 0 1.5rem' }}>
@@ -177,7 +170,6 @@ export default function RecuperarPassword() {
               </div>
             )}
 
-            {/* ── PASO 3: Nueva contraseña ── */}
             {paso === 3 && (
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>

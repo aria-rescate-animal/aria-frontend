@@ -1,163 +1,102 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  AlertTriangle, Clock, CheckCircle2,
-  MapPin, ChevronLeft, ChevronRight,
-  Plus, RefreshCw, FileText
-} from 'lucide-react';
-import { obtenerMisReportes } from '../services/reportes.service';
-import ReportDetail from '../components/ReportDetail';
-
-const ESTADO = {
-  urgente:      { label: 'Urgente',    color: '#dc2626', bg: '#fef2f2', border: '#fecaca', Icon: AlertTriangle },
-  'en proceso': { label: 'En proceso', color: '#d97706', bg: '#fffbeb', border: '#fde68a', Icon: Clock },
-  rescatado:    { label: 'Rescatado',  color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', Icon: CheckCircle2 },
-};
-
-const formatFecha = (f) => {
-  if (!f) return '';
-  return new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
-};
+import { useState, useEffect } from 'react'
+import { ReportCard } from '@/components/ReportCard'
+import { obtenerMisReportes } from '@/services/reportes.service'
+import { ChevronLeft, ChevronRight, Eye, X } from 'lucide-react'
+import { CATEGORIA_LABELS, ESTADO_LABELS, PRIORIDAD_LABELS } from '@/lib/estados'
 
 export default function MisReportes() {
-  const navigate = useNavigate();
-  const [reportes, setReportes]         = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState('');
-  const [pagina, setPagina]             = useState(1);
-  const [totalPaginas, setTotalPaginas] = useState(1);
-  const [total, setTotal]               = useState(0);
-  const [seleccionado, setSeleccionado] = useState(null);
+  const [reportes, setReportes] = useState([])
+  const [total, setTotal]       = useState(0)
+  const [page, setPage]         = useState(1)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
+  const [selected, setSelected] = useState(null)
+  const LIMIT = 9
 
-  useEffect(() => { cargar(pagina); }, [pagina]);
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    obtenerMisReportes(page, LIMIT)
+      .then(d => { setReportes(d.reportes || []); setTotal(d.total || 0) })
+      .catch(err => setError(err.response?.data?.error || err.response?.data?.message || 'No se pudieron cargar tus reportes.'))
+      .finally(() => setLoading(false))
+  }, [page])
 
-  const cargar = async (page) => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await obtenerMisReportes(page);
-      setReportes(data.reportes);
-      setTotal(data.total);
-      setTotalPaginas(data.totalPaginas);
-    } catch {
-      setError('No se pudieron cargar tus reportes. Verifica tu conexion.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCambiarEstado = (id, nuevoEstado) => {
-    setReportes(prev => prev.map(r => r.id === id ? { ...r, estado: nuevoEstado } : r));
-    if (seleccionado?.id === id) setSeleccionado(prev => ({ ...prev, estado: nuevoEstado }));
-  };
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Mis Reportes</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{total} reportes en total.</p>
+      </header>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#0f172a' }}>Mis reportes</h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#64748b' }}>
-            {total} reporte{total !== 1 ? 's' : ''} enviado{total !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={() => cargar(pagina)}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', padding: '0.5rem 0.875rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}>
-            <RefreshCw size={14} /> Actualizar
-          </button>
-          <button onClick={() => navigate('/nuevo-reporte')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}>
-            <Plus size={15} /> Nuevo reporte
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#dc2626', fontSize: '0.875rem' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
-          <p style={{ margin: 0, fontSize: '0.875rem' }}>Cargando tus reportes...</p>
-        </div>
-
+        <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : reportes.length === 0 ? (
-        <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '4rem', textAlign: 'center' }}>
-          <div style={{ width: '56px', height: '56px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-            <FileText size={24} color="#94a3b8" />
-          </div>
-          <h3 style={{ margin: '0 0 0.5rem', color: '#0f172a', fontWeight: '700' }}>Aun no tienes reportes</h3>
-          <p style={{ margin: '0 0 1.5rem', color: '#64748b', fontSize: '0.875rem' }}>
-            Cuando reportes un animal en situacion de calle, aparecera aqui.
-          </p>
-          <button onClick={() => navigate('/nuevo-reporte')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', color: 'white', padding: '0.65rem 1.25rem', borderRadius: '10px', border: 'none', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer' }}>
-            <Plus size={15} /> Crear primer reporte
-          </button>
+        <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          No tienes reportes aún.
         </div>
-
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {reportes.map(r => {
-            const cfg  = ESTADO[r.estado] || ESTADO['urgente'];
-            const Icon = cfg.Icon;
-            return (
-              <div key={r.id} onClick={() => setSeleccionado(r)}
-                style={{ background: 'white', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}>
-                <div style={{ width: '120px', flexShrink: 0, background: '#f8fafc', overflow: 'hidden' }}>
-                  <img src={r.foto || 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=140&fit=crop'} alt={r.especie}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    onError={e => { e.target.src = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=140&fit=crop'; }} />
-                </div>
-                <div style={{ flex: 1, padding: '1rem', minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <h3 style={{ margin: 0, fontWeight: '700', color: '#0f172a', fontSize: '0.95rem' }}>{r.especie}</h3>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.15rem 0.55rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: '700', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                        <Icon size={10} /> {cfg.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', flexShrink: 0 }}>{formatFecha(r.fecha)}</span>
-                  </div>
-                  <p style={{ margin: '0 0 0.6rem', color: '#475569', fontSize: '0.825rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {r.descripcion}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#64748b', fontSize: '0.8rem' }}>
-                      <MapPin size={13} color="#2563eb" />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ubicacion}</span>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: '600', flexShrink: 0 }}>Ver detalle →</span>
-                  </div>
-                </div>
+        <>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {reportes.map(r => (
+              <ReportCard key={r.id} report={r} actions={
+                <button onClick={() => setSelected(r)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition">
+                  <Eye className="h-3.5 w-3.5" /> Ver seguimiento
+                </button>
+              } />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
+              <span>Página {page} de {totalPages}</span>
+              <div className="flex gap-1">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="rounded-lg border border-border bg-card p-1.5 hover:bg-muted disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="rounded-lg border border-border bg-card p-1.5 hover:bg-muted disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
               </div>
-            );
-          })}
-
-          {totalPaginas > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.85rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', color: '#64748b', cursor: pagina === 1 ? 'not-allowed' : 'pointer', opacity: pagina === 1 ? 0.5 : 1, fontSize: '0.8rem' }}>
-                <ChevronLeft size={14} /> Anterior
-              </button>
-              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Pagina {pagina} de {totalPaginas}</span>
-              <button disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.4rem 0.85rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', color: '#64748b', cursor: pagina === totalPaginas ? 'not-allowed' : 'pointer', opacity: pagina === totalPaginas ? 0.5 : 1, fontSize: '0.8rem' }}>
-                Siguiente <ChevronRight size={14} />
-              </button>
             </div>
           )}
-        </div>
+        </>
       )}
 
-      {seleccionado && (
-        <ReportDetail reporte={seleccionado} onClose={() => setSeleccionado(null)} onCambiarEstado={handleCambiarEstado} />
-      )}
+      {selected && <SeguimientoModal reporte={selected} onClose={() => setSelected(null)} />}
     </div>
-  );
+  )
+}
+
+function SeguimientoModal({ reporte, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-bold text-foreground">Seguimiento del reporte</h3>
+            <p className="text-xs text-muted-foreground">{reporte.especie}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+        </div>
+        {reporte.foto && <img src={reporte.foto} alt={reporte.especie} className="mb-4 h-48 w-full rounded-lg object-cover" />}
+        <div className="space-y-3">
+          <Info label="Estado" value={ESTADO_LABELS[reporte.estado] || reporte.estado} />
+          <Info label="Categoría" value={CATEGORIA_LABELS[reporte.categoria] || reporte.categoria} />
+          <Info label="Prioridad" value={PRIORIDAD_LABELS[reporte.prioridad || 'normal'] || reporte.prioridad} />
+          <Info label="Entidad" value={reporte.entidad_nombre || 'Sin entidad asignada'} />
+          <Info label="Descripción" value={reporte.descripcion} />
+          <Info label="Nota de la entidad" value={reporte.nota_entidad} />
+          <Info label="Fecha" value={reporte.fecha ? new Date(reporte.fecha).toLocaleString('es-CO') : ''} />
+          {reporte.estado !== 'rescatado' && <Info label="Ubicación" value={reporte.ubicacion} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Info({ label, value }) {
+  if (!value) return null
+  return <div><p className="text-xs font-semibold text-muted-foreground">{label}</p><p className="mt-0.5 break-words text-sm text-foreground">{value}</p></div>
 }
