@@ -338,21 +338,16 @@ export default function NuevoReporte() {
         </FormField>
 
         {category && (
-          <div className="rounded-lg border border-border bg-muted/20 p-4">
-            <div className="mb-3 flex items-start gap-2">
-              <Building2 className="mt-0.5 h-4 w-4 text-navy" />
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="mb-4 flex items-start gap-3">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal/10 text-teal">
+                <Building2 className="h-4 w-4" />
+              </span>
               <div>
                 <h3 className="text-sm font-bold text-foreground">Entidad destinataria</h3>
-                <p className="mt-1 text-xs text-muted-foreground">ARIA solo muestra entidades aprobadas y compatibles con el tipo de caso.</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Selecciona una organización aprobada y compatible con el tipo de caso.</p>
               </div>
             </div>
-
-            {category === 'fauna_silvestre' && (
-              <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                <span>Este caso requiere entidades que atienden fauna silvestre. Si no hay disponibles, pasará a revisión administrativa.</span>
-              </div>
-            )}
 
             {category === 'no_estoy_seguro' ? (
               <div className="rounded-lg border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
@@ -363,18 +358,40 @@ export default function NuevoReporte() {
               <p className="text-sm text-muted-foreground">Buscando entidades compatibles...</p>
             ) : tieneEntidadesCompatibles ? (
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entidades compatibles</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Entidades disponibles</p>
                 {listaEntidades.map(ent => {
                   const selected = String(entidadId) === String(ent.id)
+                  const serviciosRelevantes = ent.servicios_relevantes?.length ? ent.servicios_relevantes : ent.servicios || []
                   return (
-                    <label key={ent.id} className={`block cursor-pointer rounded-lg border p-3 transition ${selected ? 'border-navy bg-navy/5' : 'border-border bg-card hover:border-teal/40'}`}>
-                      <div className="flex items-start gap-2">
-                        <input type="radio" name="entidad" value={ent.id} checked={selected} onChange={() => setEntidadId(String(ent.id))} className="mt-1 accent-navy" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground">{ent.nombre_organizacion || ent.nombre}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{(ent.tipo_entidad || '').replace(/_/g, ' ')}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{(ent.servicios || []).map(s => SERVICIOS_LABELS[s] || s).join(' · ')}</p>
-                          {ent.ciudad && <p className="mt-1 text-xs text-muted-foreground">{ent.ciudad}</p>}
+                    <label key={ent.id} className={`group block cursor-pointer rounded-xl border p-4 transition ${selected ? 'border-teal bg-teal/5 shadow-sm ring-1 ring-teal/20' : 'border-border bg-white hover:border-teal/50 hover:bg-muted/10'}`}>
+                      <div className="flex items-start gap-3">
+                        <input type="radio" name="entidad" value={ent.id} checked={selected} onChange={() => setEntidadId(String(ent.id))} className="mt-1 accent-teal" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-foreground" title={ent.nombre_organizacion || ent.nombre}>
+                                {ent.nombre_organizacion || ent.nombre}
+                              </p>
+                              <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                                {(ent.tipo_entidad || 'Entidad').replace(/_/g, ' ')}
+                                {ent.ciudad ? ` · ${ent.ciudad}` : ''}
+                              </p>
+                            </div>
+                            {selected && (
+                              <span className="rounded-full bg-teal px-2.5 py-1 text-[11px] font-bold text-white">
+                                Seleccionada
+                              </span>
+                            )}
+                          </div>
+                          {serviciosRelevantes.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {serviciosRelevantes.map(s => (
+                                <span key={s} className="rounded-md bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                                  {SERVICIOS_LABELS[s] || s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </label>

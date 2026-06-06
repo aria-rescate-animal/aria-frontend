@@ -23,7 +23,7 @@ function formatFecha(fecha) {
 }
 
 export function Topbar({ onMenuClick }) {
-  const { user, rol, logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [panel, setPanel]       = useState(null)
   const topbarRef               = useRef(null)
@@ -32,6 +32,7 @@ export function Topbar({ onMenuClick }) {
   const [cargando, setCargando] = useState(false)
 
   const initials = (user?.nombre || 'U').substring(0, 2).toUpperCase()
+  const displayName = (user?.nombre || 'Usuario').trim().split(/\s+/)[0]
 
   useEffect(() => {
     const fn = e => { if (topbarRef.current && !topbarRef.current.contains(e.target)) setPanel(null) }
@@ -85,7 +86,7 @@ export function Topbar({ onMenuClick }) {
         <Menu className="h-4 w-4" />
       </button>
       <div className="flex flex-1 min-w-0 items-center md:hidden">
-        <span className="text-sm font-bold text-foreground">Aria</span>
+        <span className="text-sm font-bold text-foreground">ARIA</span>
       </div>
 
       <div ref={topbarRef} className="flex items-center gap-2 ml-auto">
@@ -149,17 +150,16 @@ export function Topbar({ onMenuClick }) {
 
         <div className="relative hidden md:block">
           <button onClick={() => togglePanel('perfil')}
-            className={`flex max-w-[200px] items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-colors ${
+            className={`flex h-10 min-w-[118px] max-w-[164px] items-center gap-2 rounded-xl border px-2.5 transition-colors ${
               panel === 'perfil' ? 'border-teal/50 bg-teal/5' : 'border-border bg-card hover:bg-muted'
             }`}>
             <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-navy text-white text-xs font-bold">
               {initials}
             </div>
-            <div className="hidden min-w-0 text-left sm:block max-w-[120px]">
-              <p className="truncate text-sm font-semibold text-foreground leading-tight" title={user?.nombre}>{user?.nombre}</p>
-              <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{rol}</p>
-            </div>
-            <ChevronDown className={`hidden h-3.5 w-3.5 flex-shrink-0 text-muted-foreground transition-transform sm:block ${panel === 'perfil' ? 'rotate-180' : ''}`} />
+            <span className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground" title={user?.nombre}>
+              {displayName}
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 text-muted-foreground transition-transform ${panel === 'perfil' ? 'rotate-180' : ''}`} />
           </button>
 
           {panel === 'perfil' && (

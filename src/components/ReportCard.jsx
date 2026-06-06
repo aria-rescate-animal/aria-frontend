@@ -1,24 +1,16 @@
-import { MapPin, ShieldCheck, AlertTriangle, Loader2, AlertCircle, Flag } from 'lucide-react'
+import { MapPin, ShieldCheck } from 'lucide-react'
 import {
   normalizarEstado, normalizarCategoria,
   ESTADO_SHORT, ESTADO_STYLE,
   CATEGORIA_LABELS, PRIORIDAD_STYLE, PRIORIDAD_LABELS
 } from '@/lib/estados'
 
-const ESTADO_ICON = {
-  pendiente: AlertTriangle,
-  en_atencion: Loader2,
-  rescatado: ShieldCheck,
-  no_procede: AlertCircle,
-  requiere_revision: Flag,
-}
-
 export function ReportCard({ report, hideLocation, actions, calm = false }) {
   const estado = normalizarEstado(report.estado || report.status)
   const categoria = normalizarCategoria(report.categoria || report.category)
   const prioridad = report.prioridad || 'normal'
   const st = ESTADO_STYLE[estado] || ESTADO_STYLE.pendiente
-  const Icon = ESTADO_ICON[estado] || AlertTriangle
+  const estadoTextClass = st.text || 'text-muted-foreground'
   const catLabel = CATEGORIA_LABELS[categoria] || categoria
   const priStyle = PRIORIDAD_STYLE[prioridad] || PRIORIDAD_STYLE.normal
 
@@ -32,8 +24,8 @@ export function ReportCard({ report, hideLocation, actions, calm = false }) {
   const isResolved = estado === 'rescatado' || estado === 'no_procede'
 
   return (
-    <article className={`${calm ? '' : 'group transition-shadow hover:shadow-md'} overflow-hidden rounded-lg border bg-card ${isResolved ? 'opacity-80' : ''}`}>
-      <div className="flex md:block">
+    <article className={`${calm ? '' : 'group transition-shadow hover:shadow-md'} h-full overflow-hidden rounded-lg border bg-card ${isResolved ? 'opacity-80' : ''}`}>
+      <div className="flex h-full md:flex-col">
         {/* En móvil: imagen cuadrada lateral. En desktop: imagen 16:9 arriba */}
         <div className="h-24 w-24 flex-shrink-0 overflow-hidden bg-muted md:h-auto md:w-full md:aspect-[16/9]">
           {photo ? (
@@ -47,7 +39,7 @@ export function ReportCard({ report, hideLocation, actions, calm = false }) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between p-2.5 md:p-3">
+        <div className="flex min-w-0 flex-1 flex-col p-2.5 md:p-3">
           <div className="space-y-1.5">
             <div className="flex min-w-0 items-start justify-between gap-2">
               <h3 className="truncate text-sm font-bold text-foreground" title={species}>{species}</h3>
@@ -59,8 +51,8 @@ export function ReportCard({ report, hideLocation, actions, calm = false }) {
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold md:text-xs ${st.badge}`}>
-                <Icon className="h-3 w-3" /> {ESTADO_SHORT[estado]}
+              <span className={`py-0.5 text-[10px] font-semibold md:text-xs ${estadoTextClass}`}>
+                {ESTADO_SHORT[estado]}
               </span>
               <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 md:text-xs">
                 {catLabel}
@@ -82,7 +74,7 @@ export function ReportCard({ report, hideLocation, actions, calm = false }) {
             )}
           </div>
 
-          <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-muted-foreground md:text-[11px]">
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-[10px] text-muted-foreground md:text-[11px]">
             <span className="flex min-w-0 items-center gap-1 truncate">
               {!hideLocation && loc ? (
                 <><MapPin className="h-3 w-3 flex-shrink-0 text-teal" /><span className="truncate">{loc}</span></>

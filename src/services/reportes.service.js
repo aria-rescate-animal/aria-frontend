@@ -24,9 +24,14 @@ export const obtenerReportes = async (params = {}) => {
   return response.data
 }
 
-export const obtenerMisReportes = async (page = 1, limit = 20) => {
+export const obtenerMisReportes = async (page = 1, limit = 20, estado = '') => {
+  const params = new URLSearchParams()
+  params.append('page', page)
+  params.append('limit', limit)
+  if (estado) params.append('estado', estado)
+
   const response = await axios.get(
-    `${API_BASE_URL}/reportes/mis-reportes?page=${page}&limit=${limit}`,
+    `${API_BASE_URL}/reportes/mis-reportes?${params.toString()}`,
     authHeader()
   )
   return response.data

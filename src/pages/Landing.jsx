@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   PawPrint, Heart, Building2, FileText,
-  ArrowRight, ShieldCheck, Bell, EyeOff, ClipboardCheck, MapPinned
+  ArrowRight, ShieldCheck, Bell, EyeOff, Search
 } from 'lucide-react'
 
 const steps = [
@@ -38,9 +38,28 @@ const capabilities = [
 ]
 
 const summary = [
-  { icon: ShieldCheck, label: 'Imagen obligatoria', text: 'La evidencia visual evita reportes incompletos.' },
-  { icon: ClipboardCheck, label: 'Estados claros', text: 'Pendiente, en atención, rescatado o revisión.' },
-  { icon: MapPinned, label: 'Ubicación útil', text: 'Sector y referencia para facilitar la atención.' },
+  { icon: FileText, label: 'Reporta', text: 'Foto, ubicación y descripción del caso.' },
+  { icon: ShieldCheck, label: 'Validamos', text: 'La IA verifica que la imagen corresponda a un animal.' },
+  { icon: Building2, label: 'Atiende', text: 'Una entidad aprobada gestiona el seguimiento.' },
+]
+
+const heroAnimals = [
+  {
+    label: 'Caso con evidencia fotográfica',
+    src: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=600&fit=crop&crop=faces',
+  },
+  {
+    label: 'Mascota reportada',
+    src: 'https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?w=600&h=600&fit=crop&crop=center',
+  },
+  {
+    label: 'Animal registrado',
+    src: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=700&h=420&fit=crop&crop=center',
+  },
+  {
+    label: 'Otro animal atendido',
+    src: 'https://images.unsplash.com/photo-1452857297128-d9c29adba80b?w=600&h=600&fit=crop&crop=center',
+  },
 ]
 
 export default function Landing() {
@@ -52,7 +71,7 @@ export default function Landing() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal">
               <PawPrint className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">Aria</span>
+            <span className="text-xl font-bold text-white">ARIA</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
@@ -78,75 +97,75 @@ export default function Landing() {
       </nav>
 
       <section className="relative overflow-hidden bg-gradient-to-br from-navy via-navy-light to-teal-dark">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-teal/20 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-teal/10 blur-3xl" />
-        </div>
-
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16">
             <div className="text-center lg:text-left">
-              <div className="animate-fade-in-up relative mb-6 inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-                <span className="shimmer absolute inset-0 rounded-full" />
-                <Heart className="relative z-10 h-4 w-4 text-teal-light" />
-                <span className="relative z-10 text-sm font-medium text-white/90">
+              <div className="animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
+                <Heart className="h-4 w-4 text-teal-light" />
+                <span className="text-sm font-medium text-white/90">
                   Plataforma de rescate y seguimiento animal
                 </span>
               </div>
 
               <h1 className="animate-fade-in-up-delay-1 mb-6 text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Cada reporte{' '}
-                <span className="text-teal-light">necesita seguimiento.</span>
+                Reporta animales que necesitan ayuda
               </h1>
 
-              <p className="animate-fade-in-up-delay-2 mx-auto mb-8 max-w-2xl text-lg leading-8 text-white/70 lg:mx-0">
-                ARIA conecta ciudadanos con entidades aprobadas para registrar casos, asignarlos de forma responsable y mantener informado al reportante durante todo el proceso.
+              <p className="animate-fade-in-up-delay-2 mx-auto mb-8 max-w-2xl text-lg leading-8 text-white/76 lg:mx-0">
+                ARIA te permite registrar un caso, agregar una foto y ubicación, y enviarlo a una entidad que pueda atenderlo.
               </p>
 
-              <div className="animate-fade-in-up-delay-3 grid gap-3 sm:grid-cols-3">
+              <div className="animate-fade-in-up-delay-3 mb-10 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Link
+                  to="/register"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal px-5 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition hover:bg-teal-light"
+                >
+                  Crear cuenta para reportar <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/perdidos"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/15"
+                >
+                  <Search className="h-4 w-4" /> Ver mascotas perdidas
+                </Link>
+              </div>
+
+              <div className="animate-fade-in-up-delay-4 grid gap-3 sm:grid-cols-3">
                 {summary.map(item => (
-                  <article key={item.label} className="rounded-2xl border border-white/15 bg-white/10 p-4 text-left shadow-lg shadow-black/5 backdrop-blur-md">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-teal/20">
-                      <item.icon className="h-5 w-5 text-teal-light" />
+                  <article key={item.label} className="rounded-xl border border-white/15 bg-white/10 p-4 text-left backdrop-blur-md">
+                    <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-teal/20">
+                      <item.icon className="h-4 w-4 text-teal-light" />
                     </div>
                     <h2 className="text-sm font-bold text-white">{item.label}</h2>
-                    <p className="mt-1 text-xs leading-5 text-white/70">{item.text}</p>
+                    <p className="mt-1 text-xs leading-5 text-white/72">{item.text}</p>
                   </article>
                 ))}
               </div>
             </div>
 
-            <div className="relative hidden lg:block">
-              <div className="relative mx-auto max-w-md">
-                <div className="group relative overflow-hidden rounded-3xl shadow-2xl ring-2 ring-white/10 transition-transform duration-300 hover:scale-[1.03]">
-                  <img
-                    src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=600&fit=crop&crop=faces"
-                    alt="Animal fotografiado para reporte"
-                    className="h-80 w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
-                </div>
+            <div className="animate-fade-in-up-delay-2 relative hidden min-h-[430px] lg:block">
+              <div className="absolute left-4 top-8 z-10 w-72 overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl shadow-black/20 backdrop-blur-md">
+                <img
+                  src={heroAnimals[0].src}
+                  alt={heroAnimals[0].label}
+                  className="h-64 w-full object-cover object-center"
+                />
+              </div>
 
-                <div className="group absolute -bottom-8 -left-8 overflow-hidden rounded-3xl shadow-2xl ring-2 ring-white/10 transition-transform duration-300 hover:scale-[1.03]">
-                  <img
-                    src="https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?w=400&h=500&fit=crop&crop=center"
-                    alt="Mascota fotografiada"
-                    className="h-48 w-40 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
-                </div>
+              <div className="absolute right-8 top-24 z-20 w-60 overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl shadow-black/20 backdrop-blur-md">
+                <img
+                  src={heroAnimals[1].src}
+                  alt={heroAnimals[1].label}
+                  className="h-56 w-full object-cover object-center"
+                />
+              </div>
 
-                <div className="absolute -bottom-4 right-0 z-10 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-md">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal/20">
-                      <ShieldCheck className="h-5 w-5 text-teal-light" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Reportes con control</p>
-                      <p className="text-xs text-white/70">IA, entidad y seguimiento</p>
-                    </div>
-                  </div>
-                </div>
+              <div className="absolute left-44 top-68 z-30 w-56 overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl shadow-black/20 backdrop-blur-md">
+                <img
+                  src={heroAnimals[2].src}
+                  alt={heroAnimals[2].label}
+                  className="h-44 w-full object-cover object-center"
+                />
               </div>
             </div>
           </div>
@@ -195,10 +214,10 @@ export default function Landing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-14 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Gestión responsable de reportes
+              Funciones principales de ARIA
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Funciones clave para registrar casos, asignarlos a entidades y proteger la información sensible.
+              Herramientas para registrar casos, validar imágenes, asignar entidades y proteger la información sensible del reportante.
             </p>
           </div>
 
@@ -229,14 +248,14 @@ export default function Landing() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy">
                 <PawPrint className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-foreground">Aria</span>
+              <span className="text-xl font-bold text-foreground">ARIA</span>
             </Link>
             <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
               <Link to="/perdidos" className="transition hover:text-foreground">Mascotas perdidas</Link>
               <span>Reportes con asignación responsable</span>
               <span>Seguimiento por estado</span>
             </div>
-            <p className="text-sm text-muted-foreground">© 2026 Aria. Todos los derechos reservados.</p>
+            <p className="text-sm text-muted-foreground">© 2026 ARIA. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { createElement, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register as registerApi } from '@/services/auth.service'
 import {
   PawPrint, User, Mail, Lock, ArrowRight, Building2,
-  Phone, MapPin, Hash, Globe, ChevronDown, UserCheck, ArrowLeft
+  Phone, MapPin, Hash, Globe, ChevronDown, UserCheck, ArrowLeft, Eye, EyeOff
 } from 'lucide-react'
 
 const TIPOS_ENTIDAD = [
@@ -68,6 +68,7 @@ export default function Register() {
   })
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPass, setShowPass] = useState(false)
 
   const entityError = useMemo(() => rol === 'entidad' ? validarEntidad(form) : '', [rol, form])
 
@@ -143,7 +144,7 @@ export default function Register() {
       )
       navigate('/verificar-codigo', { state: { email: form.email } })
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al crear la cuenta. Intenta de nuevo.')
+      setError(err.response?.data?.error || 'No pudimos completar el registro. Revisa la información e inténtalo nuevamente.')
     } finally { setLoading(false) }
   }
 
@@ -156,7 +157,7 @@ export default function Register() {
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy text-white">
               <PawPrint className="h-4 w-4" />
             </div>
-            <span className="text-base font-bold text-foreground">Aria</span>
+            <span className="text-base font-bold text-foreground">ARIA</span>
           </Link>
           <Link to="/" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -164,8 +165,8 @@ export default function Register() {
           </Link>
         </div>
 
-        <h1 className="text-xl font-bold text-foreground">Crear cuenta</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Únete a la red de rescate animal</p>
+        <h1 className="text-xl font-bold text-foreground">Crear cuenta en ARIA</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Regístrate para reportar casos, recibir seguimiento y colaborar con la red de atención animal.</p>
 
         {error && (
           <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">{error}</div>
@@ -177,14 +178,17 @@ export default function Register() {
             { value: 'entidad',   label: 'Entidad',    icon: Building2 },
           ].map(r => (
             <button key={r.value} type="button" onClick={() => { setRol(r.value); setError('') }}
-              className={`flex flex-1 items-center justify-center gap-2 py-2.5 text-sm font-semibold transition ${
-                rol === r.value ? 'bg-navy text-white' : 'bg-card text-muted-foreground hover:bg-muted'
-              }`}>
+              className={'flex flex-1 items-center justify-center gap-2 py-2.5 text-sm font-semibold transition ' + (rol === r.value ? 'bg-navy text-white' : 'bg-card text-muted-foreground hover:bg-muted')}>
               <r.icon className="h-4 w-4" />
               {r.label}
             </button>
           ))}
         </div>
+        <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+          {rol === 'entidad'
+            ? 'Registra la información oficial de la entidad para que el equipo de ARIA pueda validar la solicitud.'
+            : 'Como ciudadano podrás reportar casos, consultar el seguimiento y publicar mascotas perdidas.'}
+        </p>
 
         <form onSubmit={submit} className="mt-4 space-y-3">
           <Field icon={User} label="Nombre completo *" maxLength={100}
@@ -192,15 +196,27 @@ export default function Register() {
           <Field icon={Mail} label="Correo electrónico *" maxLength={150}
             value={form.email} onChange={set('email')} type="email" placeholder="correo@ejemplo.com" />
           <Field icon={Lock} label="Contraseña *" maxLength={100}
-            value={form.contrasena} onChange={set('contrasena')} type="password" placeholder="Mínimo 8 caracteres" />
+            value={form.contrasena} onChange={set('contrasena')} type={showPass ? 'text' : 'password'} placeholder="Mínimo 8 caracteres"
+            rightAction={(
+              <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground" aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            )}
+          />
 
           {rol === 'entidad' && (
-            <div className="space-y-3 rounded-lg border border-teal/30 bg-teal/5 p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-4 w-4 text-teal" />
-                <p className="text-xs font-bold text-teal uppercase tracking-wide">Información de la entidad</p>
+            <div className="space-y-4 rounded-xl border border-teal/30 bg-teal/5 p-4">
+              <div className="rounded-lg border border-teal/20 bg-white/70 p-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-teal" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-teal">Registro de entidad</p>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Incluye datos claros de contacto, servicios y operación para facilitar la revisión administrativa.
+                </p>
               </div>
 
+              <SectionTitle title="Información legal" />
               <Field icon={Building2} label="Nombre de la organización *" maxLength={100}
                 value={form.nombre_organizacion} onChange={set('nombre_organizacion')}
                 placeholder="Nombre oficial" />
@@ -228,6 +244,8 @@ export default function Register() {
                 </div>
               </label>
 
+              <SectionTitle title="Contacto institucional" />
+
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold text-foreground">Teléfono oficial *</span>
                 <div className="relative">
@@ -243,6 +261,8 @@ export default function Register() {
 
               <Field icon={UserCheck} label="Nombre del representante *" maxLength={100}
                 value={form.representante} onChange={set('representante')} placeholder="Nombre del responsable" />
+
+              <SectionTitle title="Operación y servicios" />
 
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold text-foreground">
@@ -281,9 +301,6 @@ export default function Register() {
                   {entityError}
                 </div>
               )}
-              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
-                La información será revisada por un administrador antes de habilitar tu entidad.
-              </div>
             </div>
           )}
 
@@ -302,15 +319,26 @@ export default function Register() {
   )
 }
 
-function Field({ icon: Icon, label, type = 'text', value, onChange, placeholder, maxLength }) {
+function Field({ icon, label, type = 'text', value, onChange, placeholder, maxLength, rightAction }) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold text-foreground">{label}</span>
       <div className="relative">
-        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        {createElement(icon, { className: 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' })}
         <input type={type} value={value} onChange={onChange} placeholder={placeholder} maxLength={maxLength}
-          className="w-full rounded-lg border border-input bg-card py-2 pl-10 pr-3 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30" />
+          className={'w-full rounded-lg border border-input bg-card py-2 pl-10 ' + (rightAction ? 'pr-10' : 'pr-3') + ' text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30'} />
+        {rightAction}
       </div>
     </label>
+  )
+}
+
+function SectionTitle({ title }) {
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="h-px flex-1 bg-teal/20" />
+      <span className="text-[11px] font-bold uppercase tracking-wide text-teal">{title}</span>
+      <span className="h-px flex-1 bg-teal/20" />
+    </div>
   )
 }

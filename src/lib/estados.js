@@ -18,11 +18,11 @@ export const ESTADO_SHORT = {
 }
 
 export const ESTADO_STYLE = {
-  pendiente:         { dot: '#ef4444', badge: 'bg-red-50 text-red-700 border-red-200' },
-  en_atencion:       { dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  rescatado:         { dot: '#16a34a', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  no_procede:        { dot: '#6b7280', badge: 'bg-slate-100 text-slate-600 border-slate-200' },
-  requiere_revision: { dot: '#7c3aed', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  pendiente:         { dot: '#ef4444', badge: 'bg-red-50 text-red-700 border-red-200', text: 'text-red-700' },
+  en_atencion:       { dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-700' },
+  rescatado:         { dot: '#16a34a', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-700' },
+  no_procede:        { dot: '#6b7280', badge: 'bg-slate-100 text-slate-600 border-slate-200', text: 'text-slate-600' },
+  requiere_revision: { dot: '#7c3aed', badge: 'bg-purple-50 text-purple-700 border-purple-200', text: 'text-purple-700' },
 }
 
 export const PRIORIDAD_LABELS = {

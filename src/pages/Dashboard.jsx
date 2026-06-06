@@ -1,60 +1,85 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ReportCard } from '@/components/ReportCard'
+import { ReporteDetalleModal } from '@/components/ReporteDetalleModal'
 import { obtenerMisReportes, obtenerRescatadosPublicos } from '@/services/reportes.service'
 import { useAuth } from '@/context/AuthContext'
-import { Plus, ShieldCheck, FilePlus, Search, AlertTriangle } from 'lucide-react'
+import { Plus, ShieldCheck, FilePlus, Search, Eye } from 'lucide-react'
 
 export default function Dashboard() {
   const { user } = useAuth()
   const [myReports, setMyReports] = useState([])
   const [rescued, setRescued]     = useState([])
   const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState('')
+  const [selected, setSelected]   = useState(null)
+  const [stats, setStats]         = useState({ total: 0, pendientes: 0, enAtencion: 0, rescatados: 0 })
 
   useEffect(() => {
-    setError('')
+    let active = true
+    const misReportes = (estado = '', limit = 1) =>
+      obtenerMisReportes(1, limit, estado).catch(() => ({ reportes: [], total: 0 }))
+
     Promise.all([
-      obtenerMisReportes(1, 6)
-        .then(d => setMyReports(d.reportes || []))
-        .catch(() => {}),
-      obtenerRescatadosPublicos()
-        .then(data => setRescued((data || []).slice(0, 3)))
-        .catch(() => {}),
-    ]).finally(() => setLoading(false))
+      misReportes('', 1),
+      misReportes('pendiente', 6),
+      misReportes('requiere_revision', 6),
+      misReportes('en_atencion', 1),
+      misReportes('rescatado', 1),
+      obtenerRescatadosPublicos().catch(() => []),
+    ])
+      .then(([totalData, pendientesData, revisionData, atencionData, rescatadosData, rescuedData]) => {
+        if (!active) return
+
+        const reportesPorAtender = [
+          ...(pendientesData.reportes || []),
+          ...(revisionData.reportes || []),
+        ]
+          .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
+          .slice(0, 6)
+
+        setMyReports(reportesPorAtender)
+        setStats({
+          total: totalData.total || 0,
+          pendientes: (pendientesData.total || 0) + (revisionData.total || 0),
+          enAtencion: atencionData.total || 0,
+          rescatados: rescatadosData.total || 0,
+        })
+        setRescued((rescuedData || []).slice(0, 3))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => { active = false }
   }, [])
 
   const nombre = user?.nombre?.split(' ')[0] || 'Usuario'
-  const total  = myReports.length
-
-  const urgentes = myReports.filter(r => r.prioridad === 'urgente').length
-  const enAtencion = myReports.filter(r => r.estado === 'en_atencion').length
-  const rescatados = myReports.filter(r => r.estado === 'rescatado').length
+  const total  = stats.total
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground md:text-xl">Hola, {nombre}</h1>
-          <p className="text-xs text-muted-foreground md:text-sm">
-            {total > 0 ? `${total} reporte${total > 1 ? 's' : ''} creado${total > 1 ? 's' : ''}` : 'Bienvenido a Aria'}
+          <p className="text-[11px] font-bold uppercase tracking-wide text-teal">Panel de reportes</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Actividad de reportes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {total > 0
+              ? `${nombre}, tienes ${total} reporte${total > 1 ? 's' : ''} registrado${total > 1 ? 's' : ''}.`
+              : `${nombre}, empieza registrando el primer caso que necesite atención.`}
           </p>
         </div>
-        <Link to="/nuevo-reporte"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-sm font-semibold text-white hover:opacity-90 transition">
-          <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Nuevo reporte</span>
-          <span className="sm:hidden">Nuevo</span>
-        </Link>
-      </div>
+        <span className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground shadow-sm">
+          {total} en total
+        </span>
+      </header>
 
       {total > 0 && (
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Total',       value: total,       color: 'text-navy' },
-            { label: 'Urgentes',    value: urgentes,    color: 'text-red-600',     help: 'prioridad urgente' },
-            { label: 'En atención', value: enAtencion,  color: 'text-amber-600' },
-            { label: 'Rescatados',  value: rescatados,  color: 'text-emerald-600' },
+            { label: 'Total',       value: total,            color: 'text-navy' },
+            { label: 'Por atender', value: stats.pendientes, color: 'text-red-600', help: 'pendientes o en revisión' },
+            { label: 'En atención', value: stats.enAtencion, color: 'text-amber-600' },
+            { label: 'Rescatados',  value: stats.rescatados, color: 'text-emerald-600' },
           ].map(s => (
             <div key={s.label} className="rounded-lg border border-border bg-card px-2 py-2.5 text-center md:px-4 md:py-3"
               title={s.help}>
@@ -72,8 +97,8 @@ export default function Dashboard() {
             <FilePlus className="h-4 w-4 text-red-600" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground leading-tight">Reportar</p>
-            <p className="text-[11px] text-muted-foreground leading-tight">Animal en peligro</p>
+            <p className="text-sm font-semibold text-foreground leading-tight">Reportar caso</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">Animal que necesita ayuda</p>
           </div>
         </Link>
         <Link to="/animales-perdidos"
@@ -90,8 +115,11 @@ export default function Dashboard() {
 
       <section>
         <div className="mb-2.5 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Mis reportes</h2>
-          <Link to="/mis-reportes" className="text-xs font-medium text-teal hover:underline">Ver todos →</Link>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Reportes por atender</h2>
+            <p className="text-[11px] text-muted-foreground">Casos enviados que aún no han sido tomados por una entidad.</p>
+          </div>
+          <Link to="/mis-reportes" className="text-xs font-medium text-teal hover:underline">Ver historial →</Link>
         </div>
         {loading ? (
           <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -110,8 +138,8 @@ export default function Dashboard() {
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
               <FilePlus className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-foreground">Sin reportes aún</p>
-            <p className="mt-0.5 text-xs text-muted-foreground mb-3">Crea tu primer reporte</p>
+            <p className="text-sm font-medium text-foreground">No tienes reportes pendientes de atención</p>
+            <p className="mt-0.5 text-xs text-muted-foreground mb-3">Los casos tomados por una entidad están disponibles en el historial.</p>
             <Link to="/nuevo-reporte"
               className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition">
               <Plus className="h-3 w-3" /> Crear reporte
@@ -119,7 +147,13 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {myReports.map(r => <ReportCard key={r.id} report={r} />)}
+            {myReports.map(r => (
+              <ReportCard key={r.id} report={r} actions={
+                <button onClick={() => setSelected(r)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted">
+                  <Eye className="h-3.5 w-3.5" /> Ver detalle
+                </button>
+              } />
+            ))}
           </div>
         )}
       </section>
@@ -136,6 +170,8 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      {selected && <ReporteDetalleModal reporte={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }
