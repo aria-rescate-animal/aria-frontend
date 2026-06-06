@@ -46,14 +46,14 @@ export default function AuthCallback() {
         } else {
           navigate('/dashboard', { replace: true })
         }
-      } catch (err) {
+      } catch {
         setError('Error al procesar la sesión.')
         setTimeout(() => navigate('/login?error=google', { replace: true }), 1500)
       }
     } else {
       navigate('/login', { replace: true })
     }
-  }, [])
+  }, [login, navigate, params])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

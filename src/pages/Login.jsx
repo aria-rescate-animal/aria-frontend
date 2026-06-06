@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { createElement, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { login as loginApi } from '@/services/auth.service'
 import { API_AUTH_URL } from '@/config/api'
-import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react'
+import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -13,6 +13,7 @@ export default function Login() {
   const [pass, setPass]   = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPass, setShowPass] = useState(false)
 
   const mensajeEstado = location.state?.mensaje || ''
 
@@ -48,7 +49,7 @@ export default function Login() {
       } else if (err.response?.data?.bloqueado) {
         setError('Tu cuenta está bloqueada. Contacta al administrador.')
       } else {
-        setError(msg || 'Correo o contraseña incorrectos.')
+        setError(msg || 'No pudimos iniciar sesión con esos datos. Verifica tu correo y contraseña.')
       }
     } finally {
       setLoading(false)
@@ -62,13 +63,13 @@ export default function Login() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
             <PawPrint className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold">Aria</span>
+          <span className="text-xl font-bold">ARIA</span>
         </Link>
         <div>
-          <h2 className="text-3xl font-bold leading-tight">Bienvenido de vuelta.</h2>
-          <p className="mt-3 max-w-sm text-white/80">Continúa rescatando vidas con tu comunidad.</p>
+          <h2 className="text-3xl font-bold leading-tight">Bienvenido de nuevo</h2>
+          <p className="mt-3 max-w-sm text-white/80">Continúa gestionando reportes, seguimiento y atención animal desde ARIA.</p>
         </div>
-        <div className="text-xs text-white/60">© 2026 Aria</div>
+        <div className="text-xs text-white/60">© 2026 ARIA</div>
       </div>
 
       <div className="flex items-center justify-center bg-background p-6 md:p-8">
@@ -82,11 +83,11 @@ export default function Login() {
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy text-white">
               <PawPrint className="h-4 w-4" />
             </div>
-            <span className="text-base font-bold text-foreground">Aria</span>
+            <span className="text-base font-bold text-foreground">ARIA</span>
           </Link>
 
           <h1 className="text-2xl font-bold text-foreground">Iniciar sesión</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Accede a tu cuenta de Aria</p>
+          <p className="mt-1 text-sm text-muted-foreground">Accede a tu cuenta para continuar en ARIA.</p>
 
           {mensajeEstado && (
             <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
@@ -100,8 +101,20 @@ export default function Login() {
           )}
 
           <form onSubmit={submit} className="mt-6 space-y-4">
-            <Field icon={Mail} label="Email" type="email" value={email} onChange={setEmail} placeholder="tu@email.com" />
-            <Field icon={Lock} label="Contraseña" type="password" value={pass} onChange={setPass} placeholder="••••••••" />
+            <Field icon={Mail} label="Correo electrónico" type="email" value={email} onChange={setEmail} placeholder="correo@ejemplo.com" />
+            <Field
+              icon={Lock}
+              label="Contraseña"
+              type={showPass ? 'text' : 'password'}
+              value={pass}
+              onChange={setPass}
+              placeholder="********"
+              rightAction={(
+                <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground" aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                  {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              )}
+            />
 
             <div className="text-right">
               <Link to="/recuperar" className="text-xs text-navy hover:underline">¿Olvidaste tu contraseña?</Link>
@@ -139,14 +152,15 @@ export default function Login() {
   )
 }
 
-function Field({ icon: Icon, label, type = 'text', value, onChange, placeholder }) {
+function Field({ icon, label, type = 'text', value, onChange, placeholder, rightAction }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
       <div className="relative">
-        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        {createElement(icon, { className: 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' })}
         <input type={type} value={value} onChange={e => onChange?.(e.target.value)} placeholder={placeholder}
-          className="w-full rounded-xl border border-input bg-card py-2.5 pl-10 pr-3 text-sm text-foreground shadow-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30" />
+          className={'w-full rounded-xl border border-input bg-card py-2.5 pl-10 ' + (rightAction ? 'pr-10' : 'pr-3') + ' text-sm text-foreground shadow-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30'} />
+        {rightAction}
       </div>
     </label>
   )

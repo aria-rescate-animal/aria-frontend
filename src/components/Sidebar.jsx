@@ -57,7 +57,7 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal flex-shrink-0">
           <PawPrint className="h-4 w-4 text-white" />
         </div>
-        <span className="text-base font-bold text-white">Aria</span>
+        <span className="text-base font-bold text-white">ARIA</span>
       </Link>
 
       <nav className="flex-1 px-3 py-4">
@@ -153,7 +153,7 @@ export function MobileDrawer({ open, onClose }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal">
               <PawPrint className="h-4 w-4 text-white" />
             </div>
-            <span className="text-base font-bold text-white">Aria</span>
+            <span className="text-base font-bold text-white">ARIA</span>
           </div>
           <button onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground transition-colors">

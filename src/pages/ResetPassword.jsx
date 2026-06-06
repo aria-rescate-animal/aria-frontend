@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import axios from 'axios'
 import { API_AUTH_URL } from '@/config/api';
@@ -15,7 +15,6 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
   const [exito, setExito]     = useState(false);
-  const navigate = useNavigate();
 
   if (!token) return (
     <div style={s.page}>

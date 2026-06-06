@@ -2,24 +2,27 @@ import { useMemo, useState, useEffect } from 'react'
 import { obtenerReportes, actualizarEstado, reportarInvalido } from '@/services/reportes.service'
 import { ReportCard } from '@/components/ReportCard'
 import { normalizarEstado, normalizarCategoria, ESTADO_LABELS, CATEGORIA_LABELS } from '@/lib/estados'
-import { MapPin, Clock, User, Navigation, X, RefreshCw, AlertCircle, Flag, Eye, CheckCircle2 } from 'lucide-react'
+import { MapPin, Clock, User, Navigation, X, RefreshCw, AlertCircle, Flag, Eye, CheckCircle2, SlidersHorizontal } from 'lucide-react'
 
 const FILTROS_ESTADO = [
-  { value: 'todos', label: 'Todos' },
+  { value: 'todos', label: 'Todos los estados' },
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'en_atencion', label: 'En atención' },
   { value: 'rescatado', label: 'Rescatado' },
-  { value: 'requiere_revision', label: 'Revisión' },
 ]
-const FILTROS_CAT = [
-  { value: 'todas', label: 'Todas' },
-  { value: 'abandono', label: 'Abandonado' },
-  { value: 'herido', label: 'Herido o accidentado' },
-  { value: 'enfermo', label: 'Enfermo o débil' },
-  { value: 'maltrato', label: 'Maltrato' },
-  { value: 'cautiverio', label: 'Cautiverio' },
-  { value: 'fauna_silvestre', label: 'Fauna silvestre' },
+const FILTROS_ESPECIE = [
+  { value: 'todas', label: 'Todas las especies' },
+  { value: 'perro', label: 'Perro' },
+  { value: 'gato', label: 'Gato' },
+  { value: 'ave', label: 'Ave' },
+  { value: 'caballo', label: 'Caballo' },
+  { value: 'vaca', label: 'Vaca' },
+  { value: 'reptil', label: 'Reptil' },
+  { value: 'conejo', label: 'Conejo' },
+  { value: 'otro', label: 'Otro' },
 ]
+
+const normalizarEspecie = (value) => String(value || '').trim().toLowerCase()
 
 export default function Feed() {
   const [reports, setReports] = useState([])
@@ -27,7 +30,7 @@ export default function Feed() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterEstado, setFilterEstado] = useState('todos')
-  const [filterCat, setFilterCat] = useState('todas')
+  const [filterEspecie, setFilterEspecie] = useState('todas')
   const [selected, setSelected] = useState(null)
   const [actionError, setActionError] = useState('')
   const [stateAction, setStateAction] = useState(null)
@@ -51,12 +54,14 @@ export default function Feed() {
   const visible = useMemo(() => reports
     .filter(r => !hiddenIds.has(r.id))
     .filter(r => r.reportado_invalido !== 1)
+    .filter(r => r.estado !== 'requiere_revision')
     .filter(r => filterEstado === 'todos' || r.estado === filterEstado)
-    .filter(r => filterCat === 'todas' || r.categoria === filterCat), [reports, hiddenIds, filterEstado, filterCat])
+    .filter(r => filterEspecie === 'todas' || normalizarEspecie(r.especie) === filterEspecie), [reports, hiddenIds, filterEstado, filterEspecie])
 
   const activos = visible.filter(r => r.estado !== 'rescatado' && r.estado !== 'no_procede')
   const resueltos = visible.filter(r => r.estado === 'rescatado' || r.estado === 'no_procede')
   const pendientesCount = reports.filter(r => r.estado === 'pendiente' && !hiddenIds.has(r.id)).length
+  const totalFiltrable = reports.filter(r => !hiddenIds.has(r.id) && r.reportado_invalido !== 1 && r.estado !== 'requiere_revision').length
 
   const openStateModal = (report, estado, title, e) => {
     e?.stopPropagation()
@@ -99,22 +104,42 @@ export default function Feed() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Casos activos</h1>
-          <p className="text-sm text-muted-foreground">{pendientesCount > 0 ? <span className="font-semibold text-red-600">{pendientesCount} pendiente{pendientesCount > 1 ? 's' : ''} sin atender</span> : 'Sin casos pendientes'}</p>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-teal">Panel entidad</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Casos activos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {pendientesCount > 0
+              ? <span className="font-semibold text-red-600">{pendientesCount} caso{pendientesCount > 1 ? 's' : ''} pendiente{pendientesCount > 1 ? 's' : ''} sin atender</span>
+              : 'Sin casos pendientes'}
+          </p>
         </div>
-        <button onClick={cargar} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition"><RefreshCw className="h-3.5 w-3.5" /> Actualizar</button>
-      </div>
+        <button onClick={cargar} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:bg-muted">
+          <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+        </button>
+      </header>
 
       {error && <Notice text={error} />}
       {actionError && <Notice text={actionError} onClose={() => setActionError('')} />}
 
-      {/* Filtros consistentes (pills) */}
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
-          <FilterGroup label="Estado" items={FILTROS_ESTADO} value={filterEstado} setValue={setFilterEstado} variant="navy" />
-          <FilterGroup label="Tipo" items={FILTROS_CAT} value={filterCat} setValue={setFilterCat} variant="teal" />
+      <section className="w-full rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="flex min-w-[160px] items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal/10 text-teal">
+              <SlidersHorizontal className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-tight text-foreground">Filtrar casos</p>
+              <p className="text-[11px] leading-tight text-muted-foreground">
+                {visible.length} de {totalFiltrable}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-4">
+            <FilterSelect label="Estado" items={FILTROS_ESTADO} value={filterEstado} setValue={setFilterEstado} />
+            <FilterSelect label="Especie" items={FILTROS_ESPECIE} value={filterEspecie} setValue={setFilterEspecie} />
+          </div>
         </div>
       </section>
 
@@ -122,7 +147,7 @@ export default function Feed() {
         <div className="rounded-lg border border-dashed border-border bg-card py-12 text-center"><AlertCircle className="mx-auto mb-2 h-6 w-6 text-muted-foreground" /><p className="text-sm text-muted-foreground">No hay casos con esos filtros.</p></div>
       ) : (
         <>
-          {activos.length > 0 && <ReportSection title={`Requieren atención · ${activos.length}`} reports={activos} setSelected={setSelected} />}
+          {activos.length > 0 && <ReportSection reports={activos} setSelected={setSelected} />}
           {activos.length > 0 && resueltos.length > 0 && <div className="flex items-center gap-3"><div className="h-px flex-1 bg-border" /><span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Resueltos</span><div className="h-px flex-1 bg-border" /></div>}
           {resueltos.length > 0 && <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 opacity-75">{resueltos.map(r => <ReportCard key={r.id} report={r} hideLocation calm actions={<button onClick={() => setSelected(r)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition"><Eye className="h-3.5 w-3.5" /> Ver detalle</button>} />)}</div>}
         </>
@@ -135,10 +160,9 @@ export default function Feed() {
   )
 }
 
-function ReportSection({ title, reports, setSelected }) {
+function ReportSection({ reports, setSelected }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {reports.map(r => (
           <ReportCard
@@ -164,18 +188,19 @@ function Notice({ text, onClose }) {
   return <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center justify-between gap-2"><div className="flex items-center gap-2"><AlertCircle className="h-4 w-4 flex-shrink-0" />{text}</div>{onClose && <button onClick={onClose}><X className="h-4 w-4" /></button>}</div>
 }
 
-/* Pill reutilizable y consistente con AnimalesPerdidos */
-function FilterGroup({ label, items, value, setValue, variant = 'navy' }) {
-  const activeCls = variant === 'teal' ? 'bg-teal text-white shadow-sm' : 'bg-navy text-white shadow-sm'
+function FilterSelect({ label, items, value, setValue }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</span>
-      {items.map(f => (
-        <button key={f.value} onClick={() => setValue(f.value)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${value === f.value ? activeCls : 'bg-muted text-foreground hover:bg-muted/80'}`}>
-          {f.label}
-        </button>
-      ))}
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <label className="shrink-0 text-xs font-bold text-muted-foreground">{label}:</label>
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-xs font-semibold text-foreground outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/20"
+      >
+        {items.map(f => (
+          <option key={f.value} value={f.value}>{f.label}</option>
+        ))}
+      </select>
     </div>
   )
 }

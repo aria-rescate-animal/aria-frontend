@@ -24,7 +24,7 @@ export default function VerificarCodigo() {
   useEffect(() => {
     if (!email) { navigate('/register', { replace: true }); return; }
     inputsRef.current[0]?.focus();
-  }, []);
+  }, [email, navigate]);
 
   useEffect(() => {
     if (countdown > 0) {

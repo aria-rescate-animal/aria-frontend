@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react'
 import { ReportCard } from '@/components/ReportCard'
+import { ReporteDetalleModal } from '@/components/ReporteDetalleModal'
 import { obtenerMisReportes } from '@/services/reportes.service'
-import { ChevronLeft, ChevronRight, Eye, X } from 'lucide-react'
-import { CATEGORIA_LABELS, ESTADO_LABELS, PRIORIDAD_LABELS } from '@/lib/estados'
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+
+const ESTADOS_FILTRO = [
+  { value: '', label: 'Todos' },
+  { value: 'pendiente', label: 'Pendientes' },
+  { value: 'en_atencion', label: 'En atención' },
+  { value: 'rescatado', label: 'Rescatados' },
+  { value: 'requiere_revision', label: 'En revisión' },
+]
 
 export default function MisReportes() {
   const [reportes, setReportes] = useState([])
@@ -11,25 +19,57 @@ export default function MisReportes() {
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
   const [selected, setSelected] = useState(null)
+  const [estado, setEstado]     = useState('')
   const LIMIT = 9
 
   useEffect(() => {
     setLoading(true)
     setError('')
-    obtenerMisReportes(page, LIMIT)
+    obtenerMisReportes(page, LIMIT, estado)
       .then(d => { setReportes(d.reportes || []); setTotal(d.total || 0) })
       .catch(err => setError(err.response?.data?.error || err.response?.data?.message || 'No se pudieron cargar tus reportes.'))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, estado])
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Mis Reportes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{total} reportes en total.</p>
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-teal">Historial de reportes</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Mis reportes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Consulta el seguimiento de los casos que has registrado.
+          </p>
+        </div>
+        <span className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground shadow-sm">
+          {total} en total
+        </span>
       </header>
+
+      <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Mostrar</span>
+          {ESTADOS_FILTRO.map(filtro => {
+            const active = estado === filtro.value
+            return (
+              <button
+                key={filtro.value || 'todos'}
+                type="button"
+                onClick={() => { setEstado(filtro.value); setPage(1) }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  active
+                    ? 'bg-navy text-white shadow-sm'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
+                }`}
+              >
+                {filtro.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {error && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
 
@@ -45,7 +85,7 @@ export default function MisReportes() {
             {reportes.map(r => (
               <ReportCard key={r.id} report={r} actions={
                 <button onClick={() => setSelected(r)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition">
-                  <Eye className="h-3.5 w-3.5" /> Ver seguimiento
+                  <Eye className="h-3.5 w-3.5" /> Ver detalle
                 </button>
               } />
             ))}
@@ -64,39 +104,7 @@ export default function MisReportes() {
         </>
       )}
 
-      {selected && <SeguimientoModal reporte={selected} onClose={() => setSelected(null)} />}
+      {selected && <ReporteDetalleModal reporte={selected} onClose={() => setSelected(null)} />}
     </div>
   )
-}
-
-function SeguimientoModal({ reporte, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-base font-bold text-foreground">Seguimiento del reporte</h3>
-            <p className="text-xs text-muted-foreground">{reporte.especie}</p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-        </div>
-        {reporte.foto && <img src={reporte.foto} alt={reporte.especie} className="mb-4 h-48 w-full rounded-lg object-cover" />}
-        <div className="space-y-3">
-          <Info label="Estado" value={ESTADO_LABELS[reporte.estado] || reporte.estado} />
-          <Info label="Categoría" value={CATEGORIA_LABELS[reporte.categoria] || reporte.categoria} />
-          <Info label="Prioridad" value={PRIORIDAD_LABELS[reporte.prioridad || 'normal'] || reporte.prioridad} />
-          <Info label="Entidad" value={reporte.entidad_nombre || 'Sin entidad asignada'} />
-          <Info label="Descripción" value={reporte.descripcion} />
-          <Info label="Nota de la entidad" value={reporte.nota_entidad} />
-          <Info label="Fecha" value={reporte.fecha ? new Date(reporte.fecha).toLocaleString('es-CO') : ''} />
-          {reporte.estado !== 'rescatado' && <Info label="Ubicación" value={reporte.ubicacion} />}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Info({ label, value }) {
-  if (!value) return null
-  return <div><p className="text-xs font-semibold text-muted-foreground">{label}</p><p className="mt-0.5 break-words text-sm text-foreground">{value}</p></div>
 }
